@@ -3,13 +3,10 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/solher/arangolite"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"path/filepath"
-	//"reflect"
-	"regexp"
 	"sort"
 )
 
@@ -19,49 +16,6 @@ What does this module need to do?
  - Need to load the files into a structure that matches the yaml format.
  - Needs to return the whole list/array of structs to the caller.
 */
-
-type Migration interface {
-	migrate(action Action, db *arangolite.Database) error
-	FileName() string
-	SetFileName(name string)
-}
-
-type Action string
-
-const (
-	CREATE Action = "create"
-	DELETE Action = "delete"
-	MODIFY Action = "modify"
-)
-
-// Declares the various patterns for mapping the types.
-var collection = regexp.MustCompile(`^type:\scollection\n`)
-
-type Collection struct {
-	fileName       string
-	Type           string
-	Name           string
-	Action         Action
-	ShardKeys      []string
-	JournalSize    int
-	NumberOfShards int
-	WaitForSync    bool
-	AllowUserKeys  bool
-	Volatile       bool
-	Compactable    bool
-}
-
-func (this *Collection) migrate(action Action, db *arangolite.Database) error {
-	return nil
-}
-
-func (this *Collection) FileName() string {
-	return this.fileName
-}
-
-func (this *Collection) SetFileName(fileName string) {
-	this.fileName = fileName
-}
 
 func loadFrom(path string) []Migration {
 	parentDir := filepath.Join(path, "*.migration")
@@ -103,6 +57,10 @@ func pickT(contents []byte) (Migration, error) {
 	}
 }
 
+/*
+	Converts a path to the proper underlying types specified in
+	the childPath.
+*/
 func toStruct(childPath string) Migration {
 	contents := open(childPath)
 
@@ -111,7 +69,6 @@ func toStruct(childPath string) Migration {
 		log.Fatal(err)
 	}
 
-	//c := Collection{}
 	err = yaml.UnmarshalStrict(contents, t)
 	if err != nil {
 		log.Fatal(err)
