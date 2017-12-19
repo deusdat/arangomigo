@@ -1,17 +1,23 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"github.com/solher/arangolite"
+	"github.com/solher/arangolite/requests"
 	"regexp"
 )
 
 type Migration interface {
-	migrate(db *arangolite.Database) error
+	migrate(ctx context.Context, db *arangolite.Database) error
 	FileName() string
 	SetFileName(name string)
+	CheckSum() string
+	SetCheckSum(sum string)
 }
 
 type Operation struct {
+	checksum string
 	fileName string
 	Type     string
 	Name     string
@@ -29,10 +35,11 @@ const (
 
 // Declares the various patterns for mapping the types.
 var collection = regexp.MustCompile(`^type:\scollection\n`)
+var database = regexp.MustCompile(`^type:\sdatabase\n`)
 
 type User struct {
-	username string
-	password string
+	Username string
+	Password string
 }
 
 type Database struct {
@@ -40,6 +47,35 @@ type Database struct {
 
 	Allowed    []User
 	Disallowed []string
+}
+
+func (d Database) migrate(ctx context.Context, db *arangolite.Database) error {
+	fmt.Println("Should have done a migration like thing")
+	var resultErr error = nil
+	switch d.Action {
+	case CREATE:
+
+		rdb := requests.CreateDatabase{}
+
+		rdb.Name = d.Name
+
+		if len(d.Allowed) > 0 {
+			um := make([]map[string]interface{}, len(d.Allowed))
+			rdb.Users = um
+			for i, u := range d.Allowed {
+				jsonUser := map[string]interface{}{
+					"username": u.Username,
+					"passwd":   u.Password,
+				}
+
+				um[i] = jsonUser
+			}
+		}
+
+		resultErr = db.Run(ctx, nil, &rdb)
+
+	}
+	return resultErr
 }
 
 type Collection struct {
@@ -54,17 +90,25 @@ type Collection struct {
 	Compactable    bool
 }
 
-func (cl Collection) migrate(db *arangolite.Database) error {
+func (cl Collection) migrate(ctx context.Context, db *arangolite.Database) error {
 	switch cl.Action {
 	case DELETE:
 	}
 	return nil
 }
 
-func (cl Collection) FileName() string {
+func (cl *Operation) FileName() string {
 	return cl.fileName
 }
 
-func (cl *Collection) SetFileName(fileName string) {
+func (cl *Operation) SetFileName(fileName string) {
 	cl.fileName = fileName
+}
+
+func (cl *Operation) CheckSum() string {
+	return cl.checksum
+}
+
+func (cl *Operation) SetCheckSum(sum string) {
+	cl.checksum = sum
 }

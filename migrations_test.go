@@ -7,7 +7,10 @@ import (
 )
 
 func TestLoadFromPath(t *testing.T) {
-	ops := loadFrom("testdata/simple_migrations")
+	ops, err := loadFrom("testdata/simple_migrations")
+	if err != nil {
+		t.Error("Couldn't start test %s", err)
+	}
 	if len(ops) != 2 {
 		t.Error("Should have loaded only two files")
 	}
