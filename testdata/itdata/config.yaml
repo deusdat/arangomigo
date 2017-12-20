@@ -3,4 +3,4 @@ endpoints:
 username: root
 password: devroot
 migrationspath: /home/jdavenpo/go/src/github.com/deusdat/arangomigo/testdata/itdata
-db: MigrationExample
+db: MigoMigrationExample

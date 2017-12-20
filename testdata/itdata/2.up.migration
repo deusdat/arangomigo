@@ -1,0 +1,3 @@
+type: database
+action: delete
+name: MigoMigrationExample

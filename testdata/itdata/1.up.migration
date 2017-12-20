@@ -1,6 +1,6 @@
 type: database
 action: create
-name: MigrationExample
+name: MigoMigrationExample
 allowed:
   - username: testingUser
     password: simply_pwd

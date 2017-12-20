@@ -47,9 +47,57 @@ func perform(ctx context.Context, c Config) error {
 	}
 
 	cl, err := client(c, ctx)
+	db, err := loadDb(ctx, c, cl, &pm)
 
-	_, err = loadDb(ctx, c, cl, &pm)
+	err = migrateNow(ctx, db, pm)
 	return err
+}
+
+// Processed marker. Declared here since it's impl related.
+type migration struct {
+	_key     string
+	checksum string
+}
+
+func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations) error {
+	fmt.Println("Starting migration now")
+
+	mcol, err := db.Collection(ctx, mig_col)
+	if e(err) {
+		return err
+	}
+
+	for _, pm := range pms {
+		m := pm.change
+		u := pm.undo
+
+		// Since migrations are stored by their file names, just see if it exists
+		migRan, err := mcol.DocumentExists(ctx, m.FileName())
+		if e(err) {
+			return err
+		}
+
+		if !migRan {
+			err := m.migrate(ctx, &db)
+			if !e(err) {
+				if temp, ok := m.(*Database); !ok || temp.Action == MODIFY {
+					_, err := mcol.CreateDocument(ctx, migration{_key: m.FileName(), checksum: m.CheckSum()})
+					if e(err) {
+						return err
+					}
+				}
+			} else if e(err) && driver.IsArangoError(err) && u != nil {
+				// This probably means a migration issue, back out.
+				err = u.migrate(ctx, &db)
+				if e(err) {
+					return err
+				}
+			} else {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 func loadDb(
@@ -120,6 +168,9 @@ func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
 	var oerr error = nil
 	switch d.Action {
 	case CREATE:
+		if d.db != nil {
+			return nil
+		}
 		options := driver.CreateDatabaseOptions{}
 		active := true
 		for _, u := range d.Allowed {
@@ -134,10 +185,11 @@ func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
 		if err == nil {
 			d.db = newdb
 		} else {
-			dbs, _ := d.cl.AccessibleDatabases(ctx)
-			fmt.Printf("Accessible dbs are %v\n", dbs)
-
-			fmt.Printf("Is unauthorized %t\n", driver.IsUnauthorized(err))
+			oerr = err
+		}
+	case DELETE:
+		err := (*db).Remove(ctx)
+		if e(err) {
 			oerr = err
 		}
 	default:
