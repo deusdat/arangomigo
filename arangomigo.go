@@ -5,16 +5,17 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"log"
 	"os"
+
+	"github.com/pkg/errors"
+	"gopkg.in/yaml.v2"
 )
 
 const (
-	WAIT_ON_NO_DB = 0
-	DEFAULT_DB    = "_system"
+	waitOnDb  = 0
+	defaultDb = "_system"
 )
 
 func main() {
@@ -41,24 +42,20 @@ func main() {
 
 func migrate(c Config) error {
 	ctx := context.Background()
-
-	if err := perform(ctx, c); err != nil {
-		return err
-	}
-	return nil
+	return perform(ctx, c)
 }
 
 // Reads in a yaml file at the confLoc and returns the Config instance.
 func loadConf(confLoc string) (*Config, error) {
 	bytes, _, err := open(confLoc)
 	if e(err) {
-		return nil, errors.New(fmt.Sprintf("Couldn't locate configation at path '%s'", confLoc))
+		return nil, fmt.Errorf("Couldn't locate configation at path '%s'", confLoc)
 	}
 
 	conf := Config{}
 	err = yaml.UnmarshalStrict(bytes, &conf)
 	if e(err) {
-		return nil, errors.New(fmt.Sprintf("Couldn't parse configation at path '%s'", confLoc, err))
+		return nil, errors.Wrapf(err, "Couldn't parse configation at path '%s'", confLoc)
 	}
 
 	if conf.Db == "" {
@@ -67,6 +64,7 @@ func loadConf(confLoc string) (*Config, error) {
 	return &conf, nil
 }
 
+// Config The content of a migration configuration.
 type Config struct {
 	Endpoints      []string
 	Username       string

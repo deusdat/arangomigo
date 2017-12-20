@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
 	"testing"
+
+	"gopkg.in/yaml.v2"
 )
 
 func TestLoadFromPath(t *testing.T) {
 	ops, err := loadFrom("testdata/simple_migrations")
 	if err != nil {
-		t.Error("Couldn't start test %s", err)
+		t.Errorf("Couldn't start test %s", err)
 	}
 	if len(ops) != 2 {
 		t.Error("Should have loaded only two files")

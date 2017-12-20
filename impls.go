@@ -2,16 +2,19 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
+
+	"github.com/pkg/errors"
+
 	driver "github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
 )
 
 const (
-	mig_col string = "arangomigo"
+	migCol string = "arangomigo"
 )
 
+// Migration all the operations necessary to modify a database, even make one.
 type Migration interface {
 	migrate(ctx context.Context, driver *driver.Database) error
 	FileName() string
@@ -20,19 +23,22 @@ type Migration interface {
 	SetCheckSum(sum string)
 }
 
-// Common operation implementations
+// FileName gets the filename of the migrations configuration.
 func (op *Operation) FileName() string {
 	return op.fileName
 }
 
+// SetFileName updates the filename of the migration
 func (op *Operation) SetFileName(fileName string) {
 	op.fileName = fileName
 }
 
+// CheckSum gets the checksum for the migration's file
 func (op *Operation) CheckSum() string {
 	return op.checksum
 }
 
+// SetCheckSum sets the checksum of the file, in hex.
 func (op *Operation) SetCheckSum(sum string) {
 	op.checksum = sum
 }
@@ -46,7 +52,7 @@ func perform(ctx context.Context, c Config) error {
 		return err
 	}
 
-	cl, err := client(c, ctx)
+	cl, err := client(ctx, c)
 	db, err := loadDb(ctx, c, cl, &pm)
 	if e(err) {
 		return err
@@ -64,7 +70,7 @@ type migration struct {
 func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations) error {
 	fmt.Println("Starting migration now")
 
-	mcol, err := db.Collection(ctx, mig_col)
+	mcol, err := db.Collection(ctx, migCol)
 	if e(err) {
 		return err
 	}
@@ -115,7 +121,7 @@ func loadDb(
 		m := (*pm)[0].change
 		o, ok := m.(*Database)
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("Database %s does not exist and first migration is not the DB creation", dbName))
+			return nil, errors.Errorf("Database %s does not exist and first migration is not the DB creation", dbName)
 		}
 		if o.Name != dbName {
 			return nil, errors.New("Configuration's dbname does not match migration name")
@@ -136,13 +142,13 @@ func loadDb(
 
 	if err == nil {
 		// Check to see if the migration coll is there.
-		_, err := db.Collection(ctx, mig_col)
+		_, err := db.Collection(ctx, migCol)
 		if driver.IsNotFound(err) {
 			ko := driver.CollectionKeyOptions{}
 			ko.AllowUserKeys = true
 			options := driver.CreateCollectionOptions{}
 			options.KeyOptions = &ko
-			db.CreateCollection(ctx, mig_col, &options)
+			db.CreateCollection(ctx, migCol, &options)
 		}
 	}
 
@@ -150,7 +156,7 @@ func loadDb(
 }
 
 // Create the client used to talk to ArangoDB
-func client(c Config, ctx context.Context) (driver.Client, error) {
+func client(ctx context.Context, c Config) (driver.Client, error) {
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: c.Endpoints,
 	})
@@ -171,7 +177,7 @@ func e(err error) bool {
 }
 
 func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
-	var oerr error = nil
+	var oerr error
 	switch d.Action {
 	case CREATE:
 		if d.db != nil { // no idea why this works.
@@ -199,7 +205,7 @@ func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
 			oerr = err
 		}
 	default:
-		oerr = errors.New(fmt.Sprintf("Database migration does not support op %s", d.Action))
+		oerr = errors.Errorf("Database migration does not support op %s", d.Action)
 	}
 
 	return oerr

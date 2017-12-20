@@ -5,14 +5,16 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	driver "github.com/arangodb/go-driver" // This pisses me off. Why expose it?
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"sort"
+
+	driver "github.com/arangodb/go-driver" // This pisses me off. Why expose it?
+	"gopkg.in/yaml.v2"
 )
 
+// Operation the common elements for all migrations.
 type Operation struct {
 	checksum string
 	fileName string
@@ -21,8 +23,10 @@ type Operation struct {
 	Action   Action
 }
 
+// Action enumerated values for valid operation actions.
 type Action string
 
+// Enumerated values for the Action
 const (
 	CREATE Action = "create"
 	DELETE Action = "delete"
@@ -34,11 +38,13 @@ const (
 var collection = regexp.MustCompile(`^type:\scollection\n`)
 var database = regexp.MustCompile(`^type:\sdatabase\n`)
 
+// User the data used to update a user account
 type User struct {
 	Username string
 	Password string
 }
 
+// Database the YAML struct for configuring a database migration.
 type Database struct {
 	Operation `yaml:",inline"`
 
@@ -49,6 +55,7 @@ type Database struct {
 	db driver.Database
 }
 
+// Collection the YAML struct for configuring a collection migration.
 type Collection struct {
 	Operation `yaml:",inline"`
 
@@ -69,7 +76,7 @@ What does this module need to do?
  - Needs to create the whole database.
 */
 
-// Defines the primary change and an undo operation if provided.
+// PairedMigrations Defines the primary change and an undo operation if provided.
 // Presently undo is not a supported feature. After reading Flyway's
 // history of the feature, it might  never be supported
 type PairedMigrations struct {
