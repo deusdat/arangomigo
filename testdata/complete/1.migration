@@ -1,0 +1,6 @@
+type: database
+action: create
+name: MigoFull
+allowed:
+  - username: testingUser
+    password: simply_pwd

@@ -1,0 +1,7 @@
+# Test configuration to make sure the system can create a complex db
+endpoints:
+   - http://arangodb-local:8529
+username: root
+password: devroot
+migrationspath: /home/jdavenpo/go/src/github.com/deusdat/arangomigo/testdata/complete
+db: MigoFull

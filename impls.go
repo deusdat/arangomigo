@@ -48,15 +48,17 @@ func perform(ctx context.Context, c Config) error {
 
 	cl, err := client(c, ctx)
 	db, err := loadDb(ctx, c, cl, &pm)
-
+	if e(err) {
+		return err
+	}
 	err = migrateNow(ctx, db, pm)
 	return err
 }
 
 // Processed marker. Declared here since it's impl related.
 type migration struct {
-	_key     string
-	checksum string
+	Key      string `json:"_key"`
+	Checksum string
 }
 
 func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations) error {
@@ -81,7 +83,7 @@ func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations)
 			err := m.migrate(ctx, &db)
 			if !e(err) {
 				if temp, ok := m.(*Database); !ok || temp.Action == MODIFY {
-					_, err := mcol.CreateDocument(ctx, migration{_key: m.FileName(), checksum: m.CheckSum()})
+					_, err := mcol.CreateDocument(ctx, &migration{Key: m.FileName(), Checksum: m.CheckSum()})
 					if e(err) {
 						return err
 					}
@@ -136,7 +138,11 @@ func loadDb(
 		// Check to see if the migration coll is there.
 		_, err := db.Collection(ctx, mig_col)
 		if driver.IsNotFound(err) {
-			db.CreateCollection(ctx, mig_col, nil)
+			ko := driver.CollectionKeyOptions{}
+			ko.AllowUserKeys = true
+			options := driver.CreateCollectionOptions{}
+			options.KeyOptions = &ko
+			db.CreateCollection(ctx, mig_col, &options)
 		}
 	}
 
@@ -168,7 +174,7 @@ func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
 	var oerr error = nil
 	switch d.Action {
 	case CREATE:
-		if d.db != nil {
+		if d.db != nil { // no idea why this works.
 			return nil
 		}
 		options := driver.CreateDatabaseOptions{}
@@ -200,8 +206,25 @@ func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
 }
 
 func (cl Collection) migrate(ctx context.Context, db *driver.Database) error {
+	d := *db
 	switch cl.Action {
-	case DELETE:
+	case CREATE:
+		options := driver.CreateCollectionOptions{}
+		options.DoCompact = &cl.Compactable
+		options.JournalSize = cl.JournalSize
+		options.WaitForSync = cl.WaitForSync
+		options.ShardKeys = cl.ShardKeys
+		options.IsVolatile = cl.Volatile
+
+		// Configures the user keys
+		ko := driver.CollectionKeyOptions{}
+		ko.AllowUserKeys = cl.AllowUserKeys
+		options.KeyOptions = &ko
+
+		_, err := d.CreateCollection(ctx, cl.Name, &options)
+		if e(err) {
+			return err
+		}
 	}
 	return nil
 }

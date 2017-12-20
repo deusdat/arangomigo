@@ -1,0 +1,4 @@
+type: collection
+action: create
+name: recipes
+journalsize: 10485760
