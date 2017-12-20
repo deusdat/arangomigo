@@ -5,11 +5,61 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	driver "github.com/arangodb/go-driver" // This pisses me off. Why expose it?
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"path/filepath"
+	"regexp"
 	"sort"
 )
+
+type Operation struct {
+	checksum string
+	fileName string
+	Type     string
+	Name     string
+	Action   Action
+}
+
+type Action string
+
+const (
+	CREATE Action = "create"
+	DELETE Action = "delete"
+	MODIFY Action = "modify"
+	RUN    Action = "run"
+)
+
+// Declares the various patterns for mapping the types.
+var collection = regexp.MustCompile(`^type:\scollection\n`)
+var database = regexp.MustCompile(`^type:\sdatabase\n`)
+
+type User struct {
+	Username string
+	Password string
+}
+
+type Database struct {
+	Operation `yaml:",inline"`
+
+	Allowed    []User
+	Disallowed []string
+
+	cl driver.Client
+	db driver.Database
+}
+
+type Collection struct {
+	Operation `yaml:",inline"`
+
+	ShardKeys      []string
+	JournalSize    int
+	NumberOfShards int
+	WaitForSync    bool
+	AllowUserKeys  bool
+	Volatile       bool
+	Compactable    bool
+}
 
 /*
 What does this module need to do?
