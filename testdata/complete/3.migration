@@ -1,0 +1,9 @@
+type: graph
+action: create
+name: testing_graph
+edgedefinitions:
+   - collection: relationships
+     from: 
+         - recipes
+     to: 
+         - recipes

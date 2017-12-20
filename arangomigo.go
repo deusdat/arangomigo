@@ -26,6 +26,10 @@ func main() {
 		log.Fatal("Please specify the path for the configuration")
 	}
 
+	triggerMigration(configAt)
+}
+
+func triggerMigration(configAt string) {
 	config, err := loadConf(configAt)
 	if e(err) {
 		log.Fatal(err)

@@ -234,3 +234,43 @@ func (cl Collection) migrate(ctx context.Context, db *driver.Database) error {
 	}
 	return nil
 }
+
+func (g Graph) migrate(ctx context.Context, db *driver.Database) error {
+	d := *db
+
+	switch g.Action {
+	case CREATE:
+		options := driver.CreateGraphOptions{}
+		options.IsSmart = g.Smart
+		options.SmartGraphAttribute = g.SmartGraphAttribute
+
+		numShards := 1
+		if g.Shards > 0 {
+			numShards = g.Shards
+		}
+
+		options.NumberOfShards = numShards
+
+		for _, ed := range g.EdgeDefinitions {
+			options.EdgeDefinitions = append(
+				options.EdgeDefinitions,
+				driver.EdgeDefinition{
+					Collection: ed.Collection,
+					To:         ed.To,
+					From:       ed.From,
+				})
+		}
+
+		options.OrphanVertexCollections = g.OrphanVertex
+
+		_, err := d.CreateGraph(ctx, g.Name, &options)
+		return err
+	case DELETE:
+		aG, err := d.Graph(ctx, g.Name)
+		if e(err) {
+			return errors.Wrapf(err, "Couldn't find graph with name %s. Can't delete.", g.Name)
+		}
+		return errors.Wrapf(aG.Remove(ctx), "Couldn't remove graph %s", g.Name)
+	}
+	return nil
+}

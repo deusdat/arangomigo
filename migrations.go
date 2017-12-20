@@ -10,7 +10,8 @@ import (
 	"regexp"
 	"sort"
 
-	driver "github.com/arangodb/go-driver" // This pisses me off. Why expose it?
+	//driver "github.com/arangodb/go-driver" // This pisses me off. Why expose it?
+	driver "github.com/arangodb/go-driver"
 	"gopkg.in/yaml.v2"
 )
 
@@ -35,8 +36,9 @@ const (
 )
 
 // Declares the various patterns for mapping the types.
-var collection = regexp.MustCompile(`^type:\scollection\n`)
-var database = regexp.MustCompile(`^type:\sdatabase\n`)
+var collection = regexp.MustCompile(`^type:\scollection`)
+var database = regexp.MustCompile(`^type:\sdatabase`)
+var graph = regexp.MustCompile(`^type:\sgraph`)
 
 // User the data used to update a user account
 type User struct {
@@ -68,13 +70,32 @@ type Collection struct {
 	Compactable    bool
 }
 
-/*
-What does this module need to do?
- - Need a way to find all of the files with a certain file name pattern: migration*.yaml [X]
- - Need to load the files into a structure that matches the yaml format. [x]
- - Needs to return the whole list/array of structs to the caller.[x]
- - Needs to create the whole database.
-*/
+// EdgeDefinition contains all information needed to define
+// a single edge in a graph.
+type EdgeDefinition struct {
+	// The name of the edge collection to be used.
+	Collection string `json:"collection"`
+	// To contains the names of one or more edge collections that can contain target vertices.
+	To []string `json:"to"`
+	// From contains the names of one or more vertex collections that can contain source vertices.
+	From []string `json:"from"`
+}
+
+// Graph allows a user to manage graphs
+type Graph struct {
+	Operation `yaml:",inline"`
+	// Smart indicates that the graph uses the Enterprise
+	// edition's graph management.
+	Smart bool
+	// SmartGraphAttribute is the attribute used to shuffle vertexes.
+	SmartGraphAttribute string
+	// Shards is the number of shards each collection has.
+	Shards int
+	// OrphanVertex
+	OrphanVertex []string
+	// EdgeDifinition creates a single edge between vertexes
+	EdgeDefinitions []EdgeDefinition
+}
 
 // PairedMigrations Defines the primary change and an undo operation if provided.
 // Presently undo is not a supported feature. After reading Flyway's
@@ -150,6 +171,8 @@ func pickT(contents []byte) (Migration, error) {
 		return new(Collection), nil
 	case database.MatchString(s):
 		return new(Database), nil
+	case graph.MatchString(s):
+		return new(Graph), nil
 	default:
 		return nil, errors.New("Can't determine YAML type")
 	}
