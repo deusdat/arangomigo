@@ -1,48 +1,68 @@
 package main
 
 import (
-	"fmt"
+	"sort"
 	"testing"
 
-	"gopkg.in/yaml.v2"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoadFromPath(t *testing.T) {
-	ops, err := loadFrom("testdata/simple_migrations")
-	if err != nil {
-		t.Errorf("Couldn't start test %s", err)
-	}
-	if len(ops) != 2 {
-		t.Error("Should have loaded only two files")
-	}
+	assert.Panics(
+		t,
+		func() { loadFrom("testdata/simple_migrations") },
+		"Should have paniced")
 
-	assertEqual(t, ops[0].FileName(), "1.up.migration", "")
-	fmt.Printf("%v\n", ops)
 }
 
-func assertEqual(t *testing.T, a interface{}, b interface{}, message string) {
-	if a == b {
-		return
+func TestSimpleDataVersion(t *testing.T) {
+	var datebased = []string{
+		"2017.02.0.1.migration",
+		"2017.01.02.migration",
+		"2017.05.09.migration",
 	}
-	if len(message) == 0 {
-		message = fmt.Sprintf("%v != %v", a, b)
-	}
-	t.Fatal(message)
+
+	sort.Slice(datebased, nearlyLexical(datebased))
+	assert.Equal(t, []string{
+		"2017.01.02.migration",
+		"2017.02.0.1.migration",
+		"2017.05.09.migration",
+	}, datebased)
 }
 
-func TestCreateYaml(t *testing.T) {
-	type A struct {
-		B string
-		C string
+func TestDateAndDescription(t *testing.T) {
+	dateAndComments := []string{
+		"2.01_Add_a_new_collection.migration",
+		"1.02_Description_Here.migration",
+		"5.09_They_keep_pulling_me_in.migration",
 	}
+	sort.Slice(dateAndComments, nearlyLexical(dateAndComments))
+	assert.Equal(
+		t,
+		[]string{
+			"1.02_Description_Here.migration",
+			"2.01_Add_a_new_collection.migration",
+			"5.09_They_keep_pulling_me_in.migration"},
+		dateAndComments,
+	)
+}
 
-	type D struct {
-		A
-		E string
-	}
+func TestNumericVersions(t *testing.T) {
+	v := []string{"1.migration", "12.migration", "2.migration"}
+	sort.Slice(v, nearlyLexical(v))
+	assert.Equal(
+		t,
+		[]string{"1.migration", "2.migration", "12.migration"},
+		v,
+	)
+}
 
-	in := D{A: A{B: "Hello", C: "World"}, E: "Goodbye"}
-	out, _ := yaml.Marshal(&in)
-
-	fmt.Printf("---- out dump:\n%s\n", string(out))
+func TestDecNumericVersions(t *testing.T) {
+	v := []string{"1.0.migration", "12.migration", "1.2.migration"}
+	sort.Slice(v, nearlyLexical(v))
+	assert.Equal(
+		t,
+		[]string{"1.0.migration", "1.2.migration", "12.migration"},
+		v,
+	)
 }

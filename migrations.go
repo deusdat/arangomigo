@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strings"
 
 	//driver "github.com/arangodb/go-driver" // This pisses me off. Why expose it?
 	driver "github.com/arangodb/go-driver"
@@ -163,6 +164,8 @@ type PairedMigrations struct {
 	undo   Migration
 }
 
+var validVersion = regexp.MustCompile(`^\d*(\.\d*)*?$`)
+
 // Pairs migrations together.
 // Returns an error if unable to find migrations.
 func migrations(path string) ([]PairedMigrations, error) {
@@ -183,14 +186,63 @@ func migrations(path string) ([]PairedMigrations, error) {
 	return pms, nil
 }
 
+func lpadToLength(s string, l int) string {
+	dest := make([]rune, l)
+	copy(dest[l-len(s):], []rune(s))
+	return string(dest)
+}
+
+func version(s string) string {
+	s = filepath.Base(s)
+	idx := strings.IndexRune(s, '_')
+	if idx == -1 {
+		idx = strings.Index(s, ".migration")
+	}
+	out := s[:idx]
+	if !validVersion.MatchString(out) {
+		panic(fmt.Sprintf("File name doesn't match pattern: '%s'", s))
+	}
+	return out
+}
+
 // nearlyLexical sorts the paths based on near lexical sorting.
-// if the file paths are the same length, the paths compare as strings.
-// if the one path is shorter, its picked over the longer.
+// Chomps the description of the migration off. Uses just the
+// version information.
 func nearlyLexical(s []string) func(i, j int) bool {
 	return func(i, j int) bool {
-		il := len(s[i])
-		jl := len(s[j])
-		return il < jl || (il == jl && s[i] < s[j])
+		curV := version(s[i])
+		toV := version(s[j])
+
+		curVS := strings.Split(curV, ".")
+		toVS := strings.Split(toV, ".")
+
+		cL := len(curVS)
+		tL := len(toVS)
+		if cL < tL {
+			t := make([]string, tL)
+			copy(t, curVS)
+			curVS = t
+		} else if tL < cL {
+			t := make([]string, tL)
+			copy(t, toVS)
+			toVS = t
+		}
+		for k, v := range curVS {
+			to := toVS[k]
+			vl := len(v)
+			tl := len(to)
+			if vl > tl {
+				to = lpadToLength(to, vl)
+			} else if vl < tl {
+				v = lpadToLength(v, tl)
+			}
+			if v < to {
+				return true
+			} else if v > to {
+				return false
+			}
+		}
+		return false
 	}
 }
 

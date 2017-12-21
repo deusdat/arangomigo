@@ -45,6 +45,13 @@ the migration configurations. At this time ArangoMiGO does not support nested di
 
 Did we mention that you shouldn't store the config in source control? No? Don't store the config in source control.
 
+### A quick note on versioning
+Each step in the migration set is another version. If you're familiar with liquibase, you give the change a specific id. Flyway uses the file name format, as does ArangoMiGO. 
+
+File names have this pattern: VersionNumber<_Any_description>.migration. A version number has to be in the format of number.<number>. Here are a few examples.
+  * 1
+  * 1.4
+  * 12.6.7.2
 
 ### Creating your database
 ```yaml
