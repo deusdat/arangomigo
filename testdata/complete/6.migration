@@ -1,9 +1,4 @@
-type: graph
+type: collection
 action: create
-name: testing_graph
-edgedefinitions:
-   - collection: relationships
-     from: 
-         - recipes
-     to: 
-         - recipes
+name: recipes
+journalsize: 10485760

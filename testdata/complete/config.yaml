@@ -7,4 +7,6 @@ migrationspath: /home/jdavenpo/go/src/github.com/deusdat/arangomigo/testdata/com
 db: MigoFull
 extras:
   {patricksUser: jdavenpo,
-   patricksPassword: L33t5uck3r5}
+   patricksPassword: L33t5uck3r5,
+   shouldBeANumber: 10,
+   secret: Lots of mayo}

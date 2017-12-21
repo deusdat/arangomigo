@@ -39,6 +39,7 @@ const (
 var collection = regexp.MustCompile(`^type:\scollection`)
 var database = regexp.MustCompile(`^type:\sdatabase`)
 var graph = regexp.MustCompile(`^type:\sgraph`)
+var aql = regexp.MustCompile(`^type:\saql`)
 
 // User the data used to update a user account
 type User struct {
@@ -113,6 +114,13 @@ type SkiplistIndex struct {
 	Unique        bool
 	Sparse        bool
 	NoDeduplicate bool
+}
+
+// AQL allows arbitrary AQL execution as part of the migration.
+type AQL struct {
+	Operation `yaml:",inline"`
+	Query     string
+	BindVars  map[string]interface{}
 }
 
 // EdgeDefinition contains all information needed to define
@@ -218,6 +226,8 @@ func pickT(contents []byte) (Migration, error) {
 		return new(Database), nil
 	case graph.MatchString(s):
 		return new(Graph), nil
+	case aql.MatchString(s):
+		return new(AQL), nil
 	default:
 		return nil, errors.New("Can't determine YAML type")
 	}

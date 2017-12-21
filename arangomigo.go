@@ -65,7 +65,7 @@ func loadConf(confLoc string) (*Config, error) {
 	if conf.Db == "" {
 		return nil, errors.New("Please specifiy the database name in the config")
 	}
-	encased := make(map[string]string)
+	encased := make(map[string]interface{})
 	for k, v := range conf.Extras {
 		encased[fmt.Sprintf("${%s}", k)] = v
 	}
@@ -81,5 +81,5 @@ type Config struct {
 	MigrationsPath string
 	Db             string
 	// Extras allows the user to pass in replaced variables
-	Extras map[string]string
+	Extras map[string]interface{}
 }

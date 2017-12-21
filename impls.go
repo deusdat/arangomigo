@@ -16,7 +16,7 @@ const (
 
 // Migration all the operations necessary to modify a database, even make one.
 type Migration interface {
-	migrate(ctx context.Context, driver driver.Database, extras map[string]string) error
+	migrate(ctx context.Context, driver driver.Database, extras map[string]interface{}) error
 	FileName() string
 	SetFileName(name string)
 	CheckSum() string
@@ -71,7 +71,7 @@ func migrateNow(
 	ctx context.Context,
 	db driver.Database,
 	pms []PairedMigrations,
-	extras map[string]string,
+	extras map[string]interface{},
 ) error {
 	fmt.Println("Starting migration now")
 
@@ -118,7 +118,7 @@ func loadDb(
 	conf Config,
 	cl driver.Client,
 	pm *[]PairedMigrations,
-	extras map[string]string) (driver.Database, error) {
+	extras map[string]interface{}) (driver.Database, error) {
 	// Checks to see if the database exists
 	dbName := conf.Db
 	db, err := cl.Database(ctx, dbName)
@@ -182,7 +182,7 @@ func e(err error) bool {
 	return err != nil
 }
 
-func (d *Database) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
+func (d *Database) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	var oerr error
 	switch d.Action {
 	case CREATE:
@@ -195,8 +195,8 @@ func (d *Database) migrate(ctx context.Context, db driver.Database, extras map[s
 			options.Users = append(
 				options.Users,
 				driver.CreateDatabaseUserOptions{
-					UserName: directReplace(u.Username, extras),
-					Password: directReplace(u.Password, extras),
+					UserName: directReplace(u.Username, extras).(string),
+					Password: directReplace(u.Password, extras).(string),
 					Active:   &active,
 				},
 			)
@@ -221,14 +221,14 @@ func (d *Database) migrate(ctx context.Context, db driver.Database, extras map[s
 
 // directReplace attempts to use the key value to find a lookup in the map.
 // if one exists, it returns the values; otherwise returns the key.
-func directReplace(key string, extras map[string]string) string {
+func directReplace(key string, extras map[string]interface{}) interface{} {
 	if val, ok := extras[key]; ok {
 		return val
 	}
 	return key
 }
 
-func (cl Collection) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
+func (cl Collection) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	switch cl.Action {
 	case CREATE:
 		options := driver.CreateCollectionOptions{}
@@ -262,7 +262,7 @@ func (cl Collection) migrate(ctx context.Context, db driver.Database, extras map
 	return nil
 }
 
-func (g Graph) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
+func (g Graph) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	switch g.Action {
 	case CREATE:
 		options := driver.CreateGraphOptions{}
@@ -305,7 +305,7 @@ func (g Graph) migrate(ctx context.Context, db driver.Database, extras map[strin
 	}
 }
 
-func (i FullTextIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
+func (i FullTextIndex) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -332,7 +332,7 @@ func (i FullTextIndex) migrate(ctx context.Context, db driver.Database, extras m
 	}
 }
 
-func (i GeoIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
+func (i GeoIndex) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -360,7 +360,7 @@ func (i GeoIndex) migrate(ctx context.Context, db driver.Database, extras map[st
 	}
 }
 
-func (i HashIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
+func (i HashIndex) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -389,7 +389,7 @@ func (i HashIndex) migrate(ctx context.Context, db driver.Database, extras map[s
 	}
 }
 
-func (i PersistentIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
+func (i PersistentIndex) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -417,7 +417,7 @@ func (i PersistentIndex) migrate(ctx context.Context, db driver.Database, extras
 	}
 }
 
-func (i SkiplistIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
+func (i SkiplistIndex) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -444,4 +444,22 @@ func (i SkiplistIndex) migrate(ctx context.Context, db driver.Database, extras m
 	default:
 		return errors.Errorf("Unknown action %s", i.Action)
 	}
+}
+
+func (a AQL) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+	escaped := make(map[string]interface{})
+	for k, v := range a.BindVars {
+		if vstr, ok := v.(string); ok {
+			escaped[k] = directReplace(vstr, extras)
+		} else {
+			escaped[k] = v
+		}
+
+	}
+	cur, err := db.Query(ctx, a.Query, escaped)
+	if e(err) {
+		return errors.Wrapf(err, "Couldn't execute query '%s'", a.Query)
+	}
+	defer cur.Close()
+	return nil
 }
