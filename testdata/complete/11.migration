@@ -1,0 +1,9 @@
+type: skiplistindex
+action: create
+fields:
+    - a
+    - b
+collection: recipes
+unique: true
+sparse: true
+nodeduplicate: true

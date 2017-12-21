@@ -1,0 +1,8 @@
+type: hashindex
+action: create
+collection: recipes
+fields:
+    - one
+    - two
+sparse: true
+nodeduplicate: false

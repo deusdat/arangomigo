@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	driver "github.com/arangodb/go-driver"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestFullMigration(t *testing.T) {
@@ -37,4 +38,33 @@ func TestFullMigration(t *testing.T) {
 	}
 
 	triggerMigration(configFile)
+
+	// Look to see if everything was made properly.
+	db, err = cl.Database(ctx, conf.Db)
+	assert.NoError(t, err, "Unable to find the database")
+
+	recipes, err := db.Collection(ctx, "recipes")
+	assert.NoError(t, err, "Could not find recipes collection")
+
+	// Should find the custom recipe inserted by AQL.
+	desiredKey := "hello"
+	r := recipe{}
+	md, err := recipes.ReadDocument(ctx, desiredKey, &r)
+	assert.Equal(t, md.Key, desiredKey, "Meta data should match desired key.")
+	assert.Equal(t, r.Key, desiredKey, "Document key should match desired key.")
+	assert.Equal(t, "Lots of mayo", r.WithEscaped, "Should have updated the escaped var.")
+	assert.Equal(t, "Fish", r.MeatType, "Should not have changed.")
+	assert.Equal(t, "Taco Fishy", r.Name)
+
+	// Can't really tell which indexes are available, just that recipes should have
+	// 6: 1 for the PK and 5 others.
+	idxs, err := recipes.Indexes(ctx)
+	assert.Equal(t, 6, len(idxs), "Recipes should have 6 indexes")
+}
+
+type recipe struct {
+	Name        string
+	WithEscaped string
+	MeatType    string
+	Key         string `json:"_key"`
 }

@@ -1,5 +1,6 @@
-type: aql
-query: 'INSERT {name: "Taco Fishy", withEscaped: @escaped, meatType: @meat} IN recipes'
-bindvars:
-    escaped: ${secret}
-    meat: Fish
+type: fulltextindex
+action: create
+fields:
+    - name
+collection: recipes
+minlength: 4

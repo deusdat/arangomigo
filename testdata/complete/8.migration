@@ -1,0 +1,6 @@
+type: geoindex
+action: create
+collection: recipes
+fields:
+    - pts
+geojson: true

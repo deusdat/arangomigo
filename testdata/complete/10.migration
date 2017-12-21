@@ -1,0 +1,7 @@
+type: persistentindex
+action: create
+fields:
+    - tags
+collection: recipes
+unique: true
+sparse: true

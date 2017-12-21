@@ -1,0 +1,5 @@
+type: aql
+query: 'INSERT {Name: "Taco Fishy", WithEscaped: @escaped, MeatType: @meat, _key: "hello"} IN recipes'
+bindvars:
+    escaped: ${secret}
+    meat: Fish

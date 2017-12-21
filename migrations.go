@@ -40,6 +40,11 @@ var collection = regexp.MustCompile(`^type:\scollection`)
 var database = regexp.MustCompile(`^type:\sdatabase`)
 var graph = regexp.MustCompile(`^type:\sgraph`)
 var aql = regexp.MustCompile(`^type:\saql`)
+var fulltextidx = regexp.MustCompile(`^type:\sfulltextindex`)
+var geoidx = regexp.MustCompile(`^type:\sgeoindex`)
+var hashidx = regexp.MustCompile(`^type:\shashindex`)
+var persistentidx = regexp.MustCompile(`^type:\spersistentindex`)
+var skipidx = regexp.MustCompile(`^type:\sskiplistindex`)
 
 // User the data used to update a user account
 type User struct {
@@ -178,6 +183,17 @@ func migrations(path string) ([]PairedMigrations, error) {
 	return pms, nil
 }
 
+// nearlyLexical sorts the paths based on near lexical sorting.
+// if the file paths are the same length, the paths compare as strings.
+// if the one path is shorter, its picked over the longer.
+func nearlyLexical(s []string) func(i, j int) bool {
+	return func(i, j int) bool {
+		il := len(s[i])
+		jl := len(s[j])
+		return il < jl || (il == jl && s[i] < s[j])
+	}
+}
+
 // Loads a set of migrations from a given directory.
 func loadFrom(path string) ([]Migration, error) {
 	parentDir := filepath.Join(path, "*.migration")
@@ -188,7 +204,8 @@ func loadFrom(path string) ([]Migration, error) {
 		return nil, err
 	}
 
-	sort.Strings(migrations)
+	// Attempts to sort by pseudo lexical means.
+	sort.Slice(migrations, nearlyLexical(migrations))
 
 	var answer []Migration
 	for _, migration := range migrations {
@@ -228,6 +245,16 @@ func pickT(contents []byte) (Migration, error) {
 		return new(Graph), nil
 	case aql.MatchString(s):
 		return new(AQL), nil
+	case fulltextidx.MatchString(s):
+		return new(FullTextIndex), nil
+	case geoidx.MatchString(s):
+		return new(GeoIndex), nil
+	case hashidx.MatchString(s):
+		return new(HashIndex), nil
+	case persistentidx.MatchString(s):
+		return new(PersistentIndex), nil
+	case skipidx.MatchString(s):
+		return new(SkiplistIndex), nil
 	default:
 		return nil, errors.New("Can't determine YAML type")
 	}

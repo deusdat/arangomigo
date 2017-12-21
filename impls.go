@@ -433,6 +433,7 @@ func (i SkiplistIndex) migrate(ctx context.Context, db driver.Database, extras m
 		options := driver.EnsureSkipListIndexOptions{}
 		options.Sparse = i.Sparse
 		options.Unique = i.Unique
+		options.NoDeduplicate = i.NoDeduplicate
 		_, _, err = cl.EnsureSkipListIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
