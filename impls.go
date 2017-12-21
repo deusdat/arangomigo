@@ -284,11 +284,11 @@ func (g Graph) migrate(ctx context.Context, db *driver.Database) error {
 		err = aG.Remove(ctx)
 		if !e(err) {
 			fmt.Printf("Deleted graph '%s'\n", g.Name)
-		} else {
-			errors.Wrapf(err, "Couldn't remove graph %s", g.Name)
 		}
+		return errors.Wrapf(err, "Couldn't remove graph %s", g.Name)
+	default:
+		return errors.Errorf("Unknown action %s", g.Action)
 	}
-	return nil
 }
 
 func (i FullTextIndex) migrate(ctx context.Context, db *driver.Database) error {
