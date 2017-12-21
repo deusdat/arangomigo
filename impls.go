@@ -231,7 +231,18 @@ func (cl Collection) migrate(ctx context.Context, db *driver.Database) error {
 		if e(err) {
 			return err
 		}
+	case DELETE:
+		col, err := d.Collection(ctx, cl.Name)
+		if e(err) {
+			return errors.Wrapf(err, "Couldn't find collection '%s' to delete", cl.Name)
+		}
+		err = col.Remove(ctx)
+		if !e(err) {
+			fmt.Printf("Deleted collection '%s'\n", cl.Name)
+		}
+		return errors.Wrapf(err, "Couldn't delete collection '%s'.", cl.Name)
 	}
+
 	return nil
 }
 
@@ -270,7 +281,158 @@ func (g Graph) migrate(ctx context.Context, db *driver.Database) error {
 		if e(err) {
 			return errors.Wrapf(err, "Couldn't find graph with name %s. Can't delete.", g.Name)
 		}
-		return errors.Wrapf(aG.Remove(ctx), "Couldn't remove graph %s", g.Name)
+		err = aG.Remove(ctx)
+		if !e(err) {
+			fmt.Printf("Deleted graph '%s'\n", g.Name)
+		} else {
+			errors.Wrapf(err, "Couldn't remove graph %s", g.Name)
+		}
 	}
 	return nil
+}
+
+func (i FullTextIndex) migrate(ctx context.Context, db *driver.Database) error {
+	d := *db
+	cl, err := d.Collection(ctx, i.Collection)
+	if e(err) {
+		return errors.Wrapf(
+			err,
+			"Couldn't create full text index on collection '%s'. Collection not found",
+			i.Collection,
+		)
+	}
+	switch i.Action {
+	case DELETE:
+		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+	case CREATE:
+		options := driver.EnsureFullTextIndexOptions{}
+		options.MinLength = i.MinLength
+		_, _, err = cl.EnsureFullTextIndex(ctx, i.Fields, &options)
+
+		return errors.Wrapf(
+			err,
+			"Could not create full text index with fields '%s' in collection %s",
+			i.Fields, i.Collection,
+		)
+	default:
+		return errors.Errorf("Unknown action %s", i.Action)
+	}
+}
+
+func (i GeoIndex) migrate(ctx context.Context, db *driver.Database) error {
+	d := *db
+	cl, err := d.Collection(ctx, i.Collection)
+	if e(err) {
+		return errors.Wrapf(
+			err,
+			"Couldn't create geo index on collection '%s'. Collection not found",
+			i.Collection,
+		)
+	}
+	switch i.Action {
+	case DELETE:
+		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+	case CREATE:
+		options := driver.EnsureGeoIndexOptions{}
+		options.GeoJSON = i.GeoJSON
+		_, _, err = cl.EnsureGeoIndex(ctx, i.Fields, &options)
+
+		return errors.Wrapf(
+			err,
+			"Could not create geo index with fields '%s' in collection %s",
+			i.Fields, i.Collection,
+		)
+
+	default:
+		return errors.Errorf("Unknown action %s", i.Action)
+	}
+}
+
+func (i HashIndex) migrate(ctx context.Context, db *driver.Database) error {
+	d := *db
+	cl, err := d.Collection(ctx, i.Collection)
+	if e(err) {
+		return errors.Wrapf(
+			err,
+			"Couldn't create hash index on collection '%s'. Collection not found",
+			i.Collection,
+		)
+	}
+	switch i.Action {
+	case DELETE:
+		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+	case CREATE:
+		options := driver.EnsureHashIndexOptions{}
+		options.NoDeduplicate = i.NoDeduplicate
+		options.Sparse = i.Sparse
+		options.Unique = i.Unique
+		_, _, err = cl.EnsureHashIndex(ctx, i.Fields, &options)
+
+		return errors.Wrapf(
+			err,
+			"Could not create hash index with fields '%s' in collection %s",
+			i.Fields, i.Collection,
+		)
+	default:
+		return errors.Errorf("Unknown action %s", i.Action)
+	}
+}
+
+func (i PersistentIndex) migrate(ctx context.Context, db *driver.Database) error {
+	d := *db
+	cl, err := d.Collection(ctx, i.Collection)
+	if e(err) {
+		return errors.Wrapf(
+			err,
+			"Couldn't create persistent index on collection '%s'. Collection not found",
+			i.Collection,
+		)
+	}
+	switch i.Action {
+	case DELETE:
+		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+	case CREATE:
+		options := driver.EnsurePersistentIndexOptions{}
+		options.Sparse = i.Sparse
+		options.Unique = i.Unique
+		_, _, err = cl.EnsurePersistentIndex(ctx, i.Fields, &options)
+
+		return errors.Wrapf(
+			err,
+			"Could not create persistent index with fields '%s' in collection %s",
+			i.Fields, i.Collection,
+		)
+	default:
+		return errors.Errorf("Unknown action %s", i.Action)
+	}
+}
+
+func (i SkiplistIndex) migrate(ctx context.Context, db *driver.Database) error {
+	d := *db
+	cl, err := d.Collection(ctx, i.Collection)
+	if e(err) {
+		return errors.Wrapf(
+			err,
+			"Couldn't create skiplist index on collection '%s'. Collection not found",
+			i.Collection,
+		)
+	}
+	switch i.Action {
+	case DELETE:
+		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+	case CREATE:
+		options := driver.EnsureSkipListIndexOptions{}
+		options.Sparse = i.Sparse
+		options.Unique = i.Unique
+		_, _, err = cl.EnsureSkipListIndex(ctx, i.Fields, &options)
+
+		return errors.Wrapf(
+			err,
+			"Could not create skiplist index with fields '%s' in collection %s",
+			i.Fields, i.Collection,
+		)
+
+	default:
+		return errors.Errorf("Unknown action %s", i.Action)
+	}
 }

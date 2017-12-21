@@ -70,6 +70,51 @@ type Collection struct {
 	Compactable    bool
 }
 
+// FullTextIndex defines how to build a full text index on a field
+type FullTextIndex struct {
+	Operation  `yaml:",inline"`
+	Fields     []string
+	Collection string
+	MinLength  int
+}
+
+// GeoIndex creates a GeoIndex within the specified collection.
+type GeoIndex struct {
+	Operation  `yaml:",inline"`
+	Fields     []string
+	Collection string
+	GeoJSON    bool
+}
+
+// HashIndex creates a hash index on the fields within the specified Collection.
+type HashIndex struct {
+	Operation     `yaml:",inline"`
+	Fields        []string
+	Collection    string
+	Unique        bool
+	Sparse        bool
+	NoDeduplicate bool
+}
+
+// PersistentIndex creates a persistent index on the collections' fields.
+type PersistentIndex struct {
+	Operation  `yaml:",inline"`
+	Fields     []string
+	Collection string
+	Unique     bool
+	Sparse     bool
+}
+
+// SkiplistIndex creates a sliplist index on the collections' fields.
+type SkiplistIndex struct {
+	Operation     `yaml:",inline"`
+	Fields        []string
+	Collection    string
+	Unique        bool
+	Sparse        bool
+	NoDeduplicate bool
+}
+
 // EdgeDefinition contains all information needed to define
 // a single edge in a graph.
 type EdgeDefinition struct {
