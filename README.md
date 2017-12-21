@@ -12,13 +12,35 @@ sharding collections on distributed systems. This means that we can't rely on cr
 automatically if it doesn't exist when inserting a document. Sometimes collections should come 
 preloaded with some documents from start.
 
+Supports Arango 3.1+.
+
+## Getting an executable
+If you're familiar with Go, you can clone and build this project directly on your target machine.
+If you'd prefer an official build, look in the dist directory of the project.
 
 ## Creating your structures
 
-ArangoMiGO supports creating, modifying, and deleting graphs, collections, and even the database. 
+ArangoMiGO supports creating, modifying, and deleting graphs, collections, indexes, and even the database. 
 Below you'll see how to use YAML to create a migration set. Once a migration component executes, 
 the system doesn't rerun it. You don't have to worry about creating a collection or running data
 migration twice.
+
+### Creating the configuration file
+```yaml
+endpoints:
+   - http://arangodb-local:8529
+username: root
+password: devroot
+migrationspath: /home/jdavenpo/go/src/github.com/deusdat/arangomigo/testdata/complete
+db: MigoFull
+extras:
+  {patricksUser: jdavenpo,
+   patricksPassword: L33t5uck3r5,
+   shouldBeANumber: 10,
+   secret: Lots of mayo}
+
+```
+
 
 ### Creating your database
 ```yaml
@@ -30,3 +52,5 @@ allowed:
     password: ${patricksPassword}
 
 ```
+
+One thing to notice is the use
