@@ -5,3 +5,6 @@ username: root
 password: devroot
 migrationspath: /home/jdavenpo/go/src/github.com/deusdat/arangomigo/testdata/complete
 db: MigoFull
+extras:
+  {patricksUser: jdavenpo,
+   patricksPassword: L33t5uck3r5}

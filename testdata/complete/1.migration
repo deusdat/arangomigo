@@ -2,5 +2,5 @@ type: database
 action: create
 name: MigoFull
 allowed:
-  - username: testingUser
-    password: simply_pwd
+  - username: ${patricksUser}
+    password: ${patricksPassword}

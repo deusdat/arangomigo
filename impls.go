@@ -16,7 +16,7 @@ const (
 
 // Migration all the operations necessary to modify a database, even make one.
 type Migration interface {
-	migrate(ctx context.Context, driver driver.Database) error
+	migrate(ctx context.Context, driver driver.Database, extras map[string]string) error
 	FileName() string
 	SetFileName(name string)
 	CheckSum() string
@@ -53,11 +53,11 @@ func perform(ctx context.Context, c Config) error {
 	}
 
 	cl, err := client(ctx, c)
-	db, err := loadDb(ctx, c, cl, &pm)
+	db, err := loadDb(ctx, c, cl, &pm, c.Extras)
 	if e(err) {
 		return err
 	}
-	err = migrateNow(ctx, db, pm)
+	err = migrateNow(ctx, db, pm, c.Extras)
 	return err
 }
 
@@ -67,7 +67,12 @@ type migration struct {
 	Checksum string
 }
 
-func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations) error {
+func migrateNow(
+	ctx context.Context,
+	db driver.Database,
+	pms []PairedMigrations,
+	extras map[string]string,
+) error {
 	fmt.Println("Starting migration now")
 
 	mcol, err := db.Collection(ctx, migCol)
@@ -86,7 +91,7 @@ func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations)
 		}
 
 		if !migRan {
-			err := m.migrate(ctx, db)
+			err := m.migrate(ctx, db, extras)
 			if !e(err) {
 				if temp, ok := m.(*Database); !ok || temp.Action == MODIFY {
 					_, err := mcol.CreateDocument(ctx, &migration{Key: m.FileName(), Checksum: m.CheckSum()})
@@ -96,7 +101,7 @@ func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations)
 				}
 			} else if e(err) && driver.IsArangoError(err) && u != nil {
 				// This probably means a migration issue, back out.
-				err = u.migrate(ctx, db)
+				err = u.migrate(ctx, db, extras)
 				if e(err) {
 					return err
 				}
@@ -112,7 +117,8 @@ func loadDb(
 	ctx context.Context,
 	conf Config,
 	cl driver.Client,
-	pm *[]PairedMigrations) (driver.Database, error) {
+	pm *[]PairedMigrations,
+	extras map[string]string) (driver.Database, error) {
 	// Checks to see if the database exists
 	dbName := conf.Db
 	db, err := cl.Database(ctx, dbName)
@@ -127,7 +133,7 @@ func loadDb(
 			return nil, errors.New("Configuration's dbname does not match migration name")
 		}
 		o.cl = cl
-		err = m.migrate(ctx, db)
+		err = m.migrate(ctx, db, extras)
 		if err == nil {
 			db = o.db
 			fmt.Printf("Target db is now %s\n", db.Name())
@@ -176,7 +182,7 @@ func e(err error) bool {
 	return err != nil
 }
 
-func (d *Database) migrate(ctx context.Context, db driver.Database) error {
+func (d *Database) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
 	var oerr error
 	switch d.Action {
 	case CREATE:
@@ -186,12 +192,14 @@ func (d *Database) migrate(ctx context.Context, db driver.Database) error {
 		options := driver.CreateDatabaseOptions{}
 		active := true
 		for _, u := range d.Allowed {
-			options.Users = append(options.Users,
+			options.Users = append(
+				options.Users,
 				driver.CreateDatabaseUserOptions{
-					UserName: u.Username,
-					Password: u.Password,
+					UserName: directReplace(u.Username, extras),
+					Password: directReplace(u.Password, extras),
 					Active:   &active,
-				})
+				},
+			)
 		}
 		newdb, err := d.cl.CreateDatabase(ctx, d.Name, &options)
 		if err == nil {
@@ -208,10 +216,19 @@ func (d *Database) migrate(ctx context.Context, db driver.Database) error {
 		oerr = errors.Errorf("Database migration does not support op %s", d.Action)
 	}
 
-	return oerr
+	return errors.Wrap(oerr, "Couldn't create database")
 }
 
-func (cl Collection) migrate(ctx context.Context, db driver.Database) error {
+// directReplace attempts to use the key value to find a lookup in the map.
+// if one exists, it returns the values; otherwise returns the key.
+func directReplace(key string, extras map[string]string) string {
+	if val, ok := extras[key]; ok {
+		return val
+	}
+	return key
+}
+
+func (cl Collection) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
 	switch cl.Action {
 	case CREATE:
 		options := driver.CreateCollectionOptions{}
@@ -245,7 +262,7 @@ func (cl Collection) migrate(ctx context.Context, db driver.Database) error {
 	return nil
 }
 
-func (g Graph) migrate(ctx context.Context, db driver.Database) error {
+func (g Graph) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
 	switch g.Action {
 	case CREATE:
 		options := driver.CreateGraphOptions{}
@@ -288,7 +305,7 @@ func (g Graph) migrate(ctx context.Context, db driver.Database) error {
 	}
 }
 
-func (i FullTextIndex) migrate(ctx context.Context, db driver.Database) error {
+func (i FullTextIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -315,7 +332,7 @@ func (i FullTextIndex) migrate(ctx context.Context, db driver.Database) error {
 	}
 }
 
-func (i GeoIndex) migrate(ctx context.Context, db driver.Database) error {
+func (i GeoIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -343,7 +360,7 @@ func (i GeoIndex) migrate(ctx context.Context, db driver.Database) error {
 	}
 }
 
-func (i HashIndex) migrate(ctx context.Context, db driver.Database) error {
+func (i HashIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -372,7 +389,7 @@ func (i HashIndex) migrate(ctx context.Context, db driver.Database) error {
 	}
 }
 
-func (i PersistentIndex) migrate(ctx context.Context, db driver.Database) error {
+func (i PersistentIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -400,7 +417,7 @@ func (i PersistentIndex) migrate(ctx context.Context, db driver.Database) error 
 	}
 }
 
-func (i SkiplistIndex) migrate(ctx context.Context, db driver.Database) error {
+func (i SkiplistIndex) migrate(ctx context.Context, db driver.Database, extras map[string]string) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
