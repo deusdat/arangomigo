@@ -1,5 +1,5 @@
 type: graph
-action: create2
+action: create
 name: testing_graph
 edgedefinitions:
    - collection: relationships

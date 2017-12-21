@@ -16,7 +16,7 @@ const (
 
 // Migration all the operations necessary to modify a database, even make one.
 type Migration interface {
-	migrate(ctx context.Context, driver *driver.Database) error
+	migrate(ctx context.Context, driver driver.Database) error
 	FileName() string
 	SetFileName(name string)
 	CheckSum() string
@@ -86,7 +86,7 @@ func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations)
 		}
 
 		if !migRan {
-			err := m.migrate(ctx, &db)
+			err := m.migrate(ctx, db)
 			if !e(err) {
 				if temp, ok := m.(*Database); !ok || temp.Action == MODIFY {
 					_, err := mcol.CreateDocument(ctx, &migration{Key: m.FileName(), Checksum: m.CheckSum()})
@@ -96,7 +96,7 @@ func migrateNow(ctx context.Context, db driver.Database, pms []PairedMigrations)
 				}
 			} else if e(err) && driver.IsArangoError(err) && u != nil {
 				// This probably means a migration issue, back out.
-				err = u.migrate(ctx, &db)
+				err = u.migrate(ctx, db)
 				if e(err) {
 					return err
 				}
@@ -127,7 +127,7 @@ func loadDb(
 			return nil, errors.New("Configuration's dbname does not match migration name")
 		}
 		o.cl = cl
-		err = m.migrate(ctx, &db)
+		err = m.migrate(ctx, db)
 		if err == nil {
 			db = o.db
 			fmt.Printf("Target db is now %s\n", db.Name())
@@ -176,7 +176,7 @@ func e(err error) bool {
 	return err != nil
 }
 
-func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
+func (d *Database) migrate(ctx context.Context, db driver.Database) error {
 	var oerr error
 	switch d.Action {
 	case CREATE:
@@ -200,7 +200,7 @@ func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
 			oerr = err
 		}
 	case DELETE:
-		err := (*db).Remove(ctx)
+		err := db.Remove(ctx)
 		if e(err) {
 			oerr = err
 		}
@@ -211,8 +211,7 @@ func (d *Database) migrate(ctx context.Context, db *driver.Database) error {
 	return oerr
 }
 
-func (cl Collection) migrate(ctx context.Context, db *driver.Database) error {
-	d := *db
+func (cl Collection) migrate(ctx context.Context, db driver.Database) error {
 	switch cl.Action {
 	case CREATE:
 		options := driver.CreateCollectionOptions{}
@@ -227,12 +226,12 @@ func (cl Collection) migrate(ctx context.Context, db *driver.Database) error {
 		ko.AllowUserKeys = cl.AllowUserKeys
 		options.KeyOptions = &ko
 
-		_, err := d.CreateCollection(ctx, cl.Name, &options)
+		_, err := db.CreateCollection(ctx, cl.Name, &options)
 		if e(err) {
 			return err
 		}
 	case DELETE:
-		col, err := d.Collection(ctx, cl.Name)
+		col, err := db.Collection(ctx, cl.Name)
 		if e(err) {
 			return errors.Wrapf(err, "Couldn't find collection '%s' to delete", cl.Name)
 		}
@@ -246,9 +245,7 @@ func (cl Collection) migrate(ctx context.Context, db *driver.Database) error {
 	return nil
 }
 
-func (g Graph) migrate(ctx context.Context, db *driver.Database) error {
-	d := *db
-
+func (g Graph) migrate(ctx context.Context, db driver.Database) error {
 	switch g.Action {
 	case CREATE:
 		options := driver.CreateGraphOptions{}
@@ -274,10 +271,10 @@ func (g Graph) migrate(ctx context.Context, db *driver.Database) error {
 
 		options.OrphanVertexCollections = g.OrphanVertex
 
-		_, err := d.CreateGraph(ctx, g.Name, &options)
+		_, err := db.CreateGraph(ctx, g.Name, &options)
 		return err
 	case DELETE:
-		aG, err := d.Graph(ctx, g.Name)
+		aG, err := db.Graph(ctx, g.Name)
 		if e(err) {
 			return errors.Wrapf(err, "Couldn't find graph with name %s. Can't delete.", g.Name)
 		}
@@ -291,9 +288,8 @@ func (g Graph) migrate(ctx context.Context, db *driver.Database) error {
 	}
 }
 
-func (i FullTextIndex) migrate(ctx context.Context, db *driver.Database) error {
-	d := *db
-	cl, err := d.Collection(ctx, i.Collection)
+func (i FullTextIndex) migrate(ctx context.Context, db driver.Database) error {
+	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
 			err,
@@ -319,9 +315,8 @@ func (i FullTextIndex) migrate(ctx context.Context, db *driver.Database) error {
 	}
 }
 
-func (i GeoIndex) migrate(ctx context.Context, db *driver.Database) error {
-	d := *db
-	cl, err := d.Collection(ctx, i.Collection)
+func (i GeoIndex) migrate(ctx context.Context, db driver.Database) error {
+	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
 			err,
@@ -348,9 +343,8 @@ func (i GeoIndex) migrate(ctx context.Context, db *driver.Database) error {
 	}
 }
 
-func (i HashIndex) migrate(ctx context.Context, db *driver.Database) error {
-	d := *db
-	cl, err := d.Collection(ctx, i.Collection)
+func (i HashIndex) migrate(ctx context.Context, db driver.Database) error {
+	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
 			err,
@@ -378,9 +372,8 @@ func (i HashIndex) migrate(ctx context.Context, db *driver.Database) error {
 	}
 }
 
-func (i PersistentIndex) migrate(ctx context.Context, db *driver.Database) error {
-	d := *db
-	cl, err := d.Collection(ctx, i.Collection)
+func (i PersistentIndex) migrate(ctx context.Context, db driver.Database) error {
+	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
 			err,
@@ -407,9 +400,8 @@ func (i PersistentIndex) migrate(ctx context.Context, db *driver.Database) error
 	}
 }
 
-func (i SkiplistIndex) migrate(ctx context.Context, db *driver.Database) error {
-	d := *db
-	cl, err := d.Collection(ctx, i.Collection)
+func (i SkiplistIndex) migrate(ctx context.Context, db driver.Database) error {
+	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
 			err,
