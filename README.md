@@ -52,6 +52,7 @@ File names have this pattern: VersionNumber<_Any_description>.migration. A versi
   * 1
   * 1.4
   * 12.6.7.2
+  * 19.02.02
 
 ### Creating your database
 ```yaml
