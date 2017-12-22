@@ -72,7 +72,85 @@ name: MigoFull
 allowed:
   - username: ${patricksUser}
     password: ${patricksPassword}
-
 ```
 
 One thing to notice is that the user name and password leverage the replacement feature. You can safely commit this migration without fear of tipping your security hand in the future.
+
+You can also include a list of users not allowed in the database with `Disallowed` field.
+
+### Dropping your database
+```yaml
+type: database
+action: delete
+name: MigoFull
+```
+Deletes a database with the name of MigoFull
+
+### Creating a collection
+```yaml 
+type: collection
+action: create
+name: recipes
+journalsize: 10485760
+waitforsync: true
+```
+This example creates a collection in the database named in the config file and sets the journalsize and wait for sync properties. You can also add the following features.
+  * shardkeys - list of fields to use for the shard key.
+  * numberofshards - integer
+  * allowuserkeys - boolean 
+  * volatile - boolean
+  * compactable - boolean
+  * waitforsync - boolean
+  * journalsize - int
+
+If you don't include a specific property, Arango applies its own default.
+
+### Modifying a collection
+```yaml 
+type: collection
+action: modify
+name: recipes
+journalsize: 10485760
+waitforsync: true
+```
+You can exclude either `journalsize` or `waitforsync`.
+
+### Deleting a collection
+```yaml 
+type: collection
+action: delete
+name: recipes
+```
+
+### Creating a graph
+
+```yaml
+type: graph
+action: create
+name: testing_graph
+edgedefinitions:
+   - collection: relationships
+     from: 
+         - recipes
+     to: 
+         - recipes
+```
+
+Creates a graph named `testing_graph` with one edge between the collection vertex recipes named relationships. You can also set the following attributes.
+  * smart - bool if you are using the Enterprise edition. 
+  * smartgraphattribute - string the attribute used to shuffle vertexes.
+	* shards - int the number of shards each collection has.
+	* orphanvertices - []string a list of collections within the graph, but not part of an edge.
+	* edgedefinitions - []EdgeDefinition creates a single edge between vertexes, where EdgeDefinition looks like the on in the example above.
+
+### Modify a graph
+You must supply at least.
+```yaml
+type: graph
+action: modify
+name: testing_graph
+```
+You can also specify one or more of the following attributes. It is possible that a graph could be partially configured. If you specified a series of changes like removing orphan vertices and adding new edges, that the vertices maybe deleted, but the edges won't be added. Please watch the output for warnings.
+
+### Indexes
+At present you can only create indexes. ArangoDB doesn't expose an API to properly identify indexes.

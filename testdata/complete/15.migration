@@ -1,0 +1,17 @@
+type: graph
+action: modify
+name: testing_graph
+edgedefinitions:
+   - collection: owns
+     from: 
+         - users
+     to: 
+         - recipes
+   - collection: relationships
+     from: 
+         - recipes
+     to: 
+         - recipes
+         - users
+orphanvertices:
+   - another

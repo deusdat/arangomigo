@@ -1,0 +1,5 @@
+type: collection
+action: create
+name: users
+journalsize: 15000000
+waitforsync: true

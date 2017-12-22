@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"sort"
 	"testing"
 
 	driver "github.com/arangodb/go-driver"
@@ -64,6 +65,20 @@ func TestFullMigration(t *testing.T) {
 	// Make sure wait for sync sticks.
 	colprop, err := recipes.Properties(ctx)
 	assert.True(t, colprop.WaitForSync, "Should wait for sync.")
+
+	g, err := db.Graph(ctx, "testing_graph")
+	assert.NoError(t, err, "Should have gotten a graph")
+	vcs, err := g.VertexCollections(ctx)
+	assert.NoError(t, err, "Should have gotten vertices")
+
+	// Vertices include those in edges and oraphans.
+	justNames := []string{}
+	for _, k := range vcs {
+		justNames = append(justNames, k.Name())
+	}
+	sort.Strings(justNames)
+
+	assert.Equal(t, []string{"another", "recipes", "users"}, justNames)
 }
 
 type recipe struct {

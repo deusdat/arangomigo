@@ -292,16 +292,21 @@ func (g Graph) migrate(ctx context.Context, db driver.Database, extras map[strin
 	switch g.Action {
 	case CREATE:
 		options := driver.CreateGraphOptions{}
-		options.IsSmart = g.Smart
+
+		// Only set smart if we know the user set something.
+		if g.Smart != nil {
+			options.IsSmart = *g.Smart
+		}
 		options.SmartGraphAttribute = g.SmartGraphAttribute
 
+		// Set the number of shards.
 		numShards := 1
 		if g.Shards > 0 {
 			numShards = g.Shards
 		}
-
 		options.NumberOfShards = numShards
 
+		// Map the edge collections.
 		for _, ed := range g.EdgeDefinitions {
 			options.EdgeDefinitions = append(
 				options.EdgeDefinitions,
@@ -311,8 +316,10 @@ func (g Graph) migrate(ctx context.Context, db driver.Database, extras map[strin
 					From:       ed.From,
 				})
 		}
+		options.OrphanVertexCollections = g.OrphanVertices
 
-		options.OrphanVertexCollections = g.OrphanVertex
+		// Map the Orphan Vertices
+		options.OrphanVertexCollections = g.OrphanVertices
 
 		_, err := db.CreateGraph(ctx, g.Name, &options)
 		return err
@@ -326,6 +333,77 @@ func (g Graph) migrate(ctx context.Context, db driver.Database, extras map[strin
 			fmt.Printf("Deleted graph '%s'\n", g.Name)
 		}
 		return errors.Wrapf(err, "Couldn't remove graph %s", g.Name)
+	case MODIFY:
+		aG, err := db.Graph(ctx, g.Name)
+		if e(err) {
+			return errors.Wrapf(err, "Couldn't find graph with name %s. Can't modify.", g.Name)
+		}
+
+		// Order matters. If an edge and a vertex are removed, the edge has to
+		// go first, otherwise Arango will throw an error.
+		if len(g.RemoveEdges) > 0 {
+			for _, re := range g.RemoveEdges {
+				ec, _, err := aG.EdgeCollection(ctx, re)
+				if driver.IsNotFound(err) {
+					fmt.Printf("Couldn't find edge collection '%s' to remove.\n", re)
+					continue
+				}
+
+				if err = ec.Remove(ctx); e(err) {
+					return errors.Wrapf(err, "Couldn't remove edge collection '%s'", re)
+				}
+			}
+		}
+
+		if len(g.RemoveVertices) > 0 {
+			for _, v := range g.RemoveVertices {
+				vc, err := aG.VertexCollection(ctx, v)
+				if driver.IsNotFound(err) {
+					fmt.Printf("Couldn't find vertex '%s' to remove.", v)
+				}
+				if err = vc.Remove(ctx); e(err) {
+					return errors.Wrapf(err, "Couldn't remove vertex collection '%s'", v)
+				}
+
+			}
+		}
+
+		if len(g.OrphanVertices) > 0 {
+			for _, o := range g.OrphanVertices {
+				_, err := aG.CreateVertexCollection(ctx, o)
+				if e(err) {
+					return errors.Wrapf(err, "Couldn't add orphan vertex '%s'", o)
+				}
+			}
+		}
+
+		if len(g.EdgeDefinitions) > 0 {
+			for i, ed := range g.EdgeDefinitions {
+				if exists, err := aG.EdgeCollectionExists(ctx, ed.Collection); exists && !e(err) {
+					// Assume an update
+					constraints := driver.VertexConstraints{
+						From: ed.From,
+						To:   ed.To,
+					}
+					return errors.Wrapf(
+						aG.SetVertexConstraints(ctx, ed.Collection, constraints),
+						"Couldn't update edge constrain #%d",
+						i,
+					)
+				} else if !exists && !e(err) {
+					vc := driver.VertexConstraints{}
+					vc.From = ed.From
+					vc.To = ed.To
+					_, err = aG.CreateEdgeCollection(ctx, ed.Collection, vc)
+					if e(err) {
+						return errors.Wrapf(err, "Couldn't create edge collection '%s'", ed.Collection)
+					}
+				} else {
+					return errors.WithStack(err)
+				}
+			}
+		}
+		return nil
 	default:
 		return errors.Errorf("Unknown action %s", g.Action)
 	}

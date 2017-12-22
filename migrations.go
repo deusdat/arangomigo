@@ -145,15 +145,19 @@ type Graph struct {
 	Operation `yaml:",inline"`
 	// Smart indicates that the graph uses the Enterprise
 	// edition's graph management.
-	Smart bool
+	Smart *bool
 	// SmartGraphAttribute is the attribute used to shuffle vertexes.
 	SmartGraphAttribute string
 	// Shards is the number of shards each collection has.
 	Shards int
 	// OrphanVertex
-	OrphanVertex []string
+	OrphanVertices []string
 	// EdgeDifinition creates a single edge between vertexes
 	EdgeDefinitions []EdgeDefinition
+	// Names of Edge Collections to remove
+	RemoveEdges []string
+	// Names of vertices to re
+	RemoveVertices []string
 }
 
 // PairedMigrations Defines the primary change and an undo operation if provided.
@@ -223,10 +227,11 @@ func nearlyLexical(s []string) func(i, j int) bool {
 			copy(t, curVS)
 			curVS = t
 		} else if tL < cL {
-			t := make([]string, tL)
+			t := make([]string, cL)
 			copy(t, toVS)
 			toVS = t
 		}
+
 		for k, v := range curVS {
 			to := toVS[k]
 			vl := len(v)
