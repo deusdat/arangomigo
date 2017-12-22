@@ -232,15 +232,26 @@ func (cl Collection) migrate(ctx context.Context, db driver.Database, extras map
 	switch cl.Action {
 	case CREATE:
 		options := driver.CreateCollectionOptions{}
-		options.DoCompact = &cl.Compactable
-		options.JournalSize = cl.JournalSize
-		options.WaitForSync = cl.WaitForSync
-		options.ShardKeys = cl.ShardKeys
-		options.IsVolatile = cl.Volatile
-
+		if cl.Compactable != nil {
+			options.DoCompact = cl.Compactable
+		}
+		if cl.JournalSize != nil {
+			options.JournalSize = *cl.JournalSize
+		}
+		if cl.WaitForSync != nil {
+			options.WaitForSync = *cl.WaitForSync
+		}
+		if cl.ShardKeys != nil {
+			options.ShardKeys = *cl.ShardKeys
+		}
+		if cl.Volatile != nil {
+			options.IsVolatile = *cl.Volatile
+		}
 		// Configures the user keys
 		ko := driver.CollectionKeyOptions{}
-		ko.AllowUserKeys = cl.AllowUserKeys
+		if cl.AllowUserKeys != nil {
+			ko.AllowUserKeys = *cl.AllowUserKeys
+		}
 		options.KeyOptions = &ko
 
 		_, err := db.CreateCollection(ctx, cl.Name, &options)
@@ -257,6 +268,21 @@ func (cl Collection) migrate(ctx context.Context, db driver.Database, extras map
 			fmt.Printf("Deleted collection '%s'\n", cl.Name)
 		}
 		return errors.Wrapf(err, "Couldn't delete collection '%s'.", cl.Name)
+	case MODIFY:
+		col, err := db.Collection(ctx, cl.Name)
+		if e(err) {
+			return errors.Wrapf(err, "Couldn't find collection '%s' to delete", cl.Name)
+		}
+		options := driver.SetCollectionPropertiesOptions{}
+		if cl.JournalSize != nil {
+			options.JournalSize = int64(*cl.JournalSize)
+		}
+
+		if cl.WaitForSync != nil {
+			options.WaitForSync = cl.WaitForSync
+		}
+		err = col.SetProperties(ctx, options)
+		return errors.Wrapf(err, "Couldn't update collection '%s'", col.Name)
 	}
 
 	return nil

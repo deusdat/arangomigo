@@ -60,6 +60,10 @@ func TestFullMigration(t *testing.T) {
 	// 6: 1 for the PK and 5 others.
 	idxs, err := recipes.Indexes(ctx)
 	assert.Equal(t, 6, len(idxs), "Recipes should have 6 indexes")
+
+	// Make sure wait for sync sticks.
+	colprop, err := recipes.Properties(ctx)
+	assert.True(t, colprop.WaitForSync, "Should wait for sync.")
 }
 
 type recipe struct {

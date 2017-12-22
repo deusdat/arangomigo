@@ -1,5 +1,5 @@
 type: collection
-action: create
+action: modify
 name: recipes
-journalsize: 10485760
+journalsize: 15000000
 waitforsync: true

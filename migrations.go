@@ -68,13 +68,13 @@ type Database struct {
 type Collection struct {
 	Operation `yaml:",inline"`
 
-	ShardKeys      []string
-	JournalSize    int
-	NumberOfShards int
-	WaitForSync    bool
-	AllowUserKeys  bool
-	Volatile       bool
-	Compactable    bool
+	ShardKeys      *[]string
+	JournalSize    *int
+	NumberOfShards *int
+	WaitForSync    *bool
+	AllowUserKeys  *bool
+	Volatile       *bool
+	Compactable    *bool
 }
 
 // FullTextIndex defines how to build a full text index on a field
