@@ -121,6 +121,15 @@ type: collection
 action: delete
 name: recipes
 ```
+### Executing AQL
+```yaml
+type: aql
+query: 'INSERT {Name: "Taco Fishy", WithEscaped: @escaped, MeatType: @meat, _key: "hello"} IN recipes'
+bindvars:
+    escaped: ${secret}
+    meat: Fish
+```
+The example shows how to execute arbitrary AQL. You should use single quotes to encapsulate the statement. If you need to insert AQL variables, add them to the bindvars. You can use the value subsitution with Extras from the configuration. One useful scenario is creating user accounts for your application.
 
 ### Creating a graph
 
@@ -180,4 +189,72 @@ name: testing_graph
 ```
 
 ### Indexes
-At present you can only create indexes. ArangoDB doesn't expose an API to properly identify indexes.
+At present you can only create indexes. ArangoDB doesn't expose an API to properly identify indexes. As a result, the migrator ignore the action. This may change in the future. Please specify create.
+
+**Full Text Index**
+```yaml
+type: fulltextindex
+action: create
+fields:
+    - name
+collection: recipes
+minlength: 4
+```
+You can add a full text index by specifying the minlength and fields.
+
+**Geo Index**
+```yaml
+type: geoindex
+action: create
+collection: recipes
+fields:
+    - pts
+geojson: true
+```
+geojson indicate that field or fields are an array in the form [lat, long]. To excerpt the Arango Documentation
+
+-------------------------------------------------
+>To create a geo index on an array attribute that contains longitude first, set the geoJson attribute to true. This corresponds to the format described in RFC 7946 Position
+
+>collection.ensureIndex({ type: "geo", fields: [ "location" ], geoJson: true })
+
+>To create a geo-spatial index on all documents using latitude and longitude as separate attribute paths, two paths need to be specified in the fields array:
+
+>collection.ensureIndex({ type: "geo", fields: [ "latitude", "longitude" ] })
+-------------------------------------------------
+
+**Hash Index**
+```yaml
+type: hashindex
+action: create
+collection: recipes
+fields:
+    - one
+    - two
+sparse: true
+nodeduplicate: false
+```
+
+**Persisten Index**
+```yaml
+type: persistentindex
+action: create
+fields:
+    - tags
+collection: recipes
+unique: true
+sparse: true
+```
+
+**Skiplist Index**
+```yaml 
+type: skiplistindex
+action: create
+fields:
+    - a
+    - b
+collection: recipes
+unique: true
+sparse: true
+nodeduplicate: true
+```
