@@ -7,7 +7,7 @@ The goal behind the project is to apply to ArangoDB years of hard fought lessons
 of ArangoDB that looks like a mini-production. The system should automatically adjust to merges. While providing all of this, it must also support the neat features we all know and chose ArangoDB for: 
 sharding collections on distributed systems. This means that we can't rely on creating the collection automatically if it doesn't exist when inserting a document. Sometimes collections should come preloaded with some documents from start.
 
-Supports Arango 3.1+.
+### Supports Arango 3.1+.
 
 ## Getting an executable
 If you're familiar with Go, you can clone and build this project directly on your target machine. If you'd prefer an official build, look in the dist directory of the project.
@@ -28,7 +28,7 @@ migrationspath: /home/jdavenpo/go/src/github.com/deusdat/arangomigo/testdata/com
 db: MigoFull
 extras:
   {patricksUser: jdavenpo,
-   patricksPassword: L33t5uck3r5,
+   patricksPassword: Extrem!Password&^%$#,
    shouldBeANumber: 10,
    secret: Lots of mayo}
 
@@ -49,10 +49,20 @@ Did we mention that you shouldn't store the config in source control? No? Don't 
 Each step in the migration set is another version. If you're familiar with liquibase, you give the change a specific id. Flyway uses the file name format, as does ArangoMiGO. 
 
 File names have this pattern: VersionNumber<_Any_description>.migration. A version number has to be in the format of number.<number>. Here are a few examples.
-  * 1
-  * 1.4
-  * 12.6.7.2
-  * 19.02.02
+  * 1.migration
+  * 1.4_Adds_ROI_CALC_FUNCTION.migration
+  * 12.6.7.2.migration
+  * 19.02.02.migration
+
+Let's say you start with the following migration set.
+  * 1.migration
+  * 2.migration
+  * 3.migration
+  * 4.migration
+
+Then you need to add an index for a collection created in `3.migration`. You can either create `5.migration` or `3.1.migration`. ArangoMiGO will see that it's applied 3, but not 3.1 and apply it. Either way works. The latter is more logically consisent for a new deploy.
+
+ArangoMiGO halts at the first failure. Other systems solider through error and report them at the end. In our experience this is a bad idea when it comes to our data. We baked that philosophy in.
 
 ### Creating your database
 ```yaml
