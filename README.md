@@ -144,13 +144,40 @@ Creates a graph named `testing_graph` with one edge between the collection verte
 	* edgedefinitions - []EdgeDefinition creates a single edge between vertexes, where EdgeDefinition looks like the on in the example above.
 
 ### Modify a graph
-You must supply at least.
+This example modifies the graph `testing_graph` by adding a new edge `owns` and changing the existing edge `relationship` to include users as a target. Finally, this adds a vertex `another` to the orphan vertices collections.
 ```yaml
 type: graph
 action: modify
 name: testing_graph
+edgedefinitions:
+   - collection: owns
+     from: 
+         - users
+     to: 
+         - recipes
+   - collection: relationships
+     from: 
+         - recipes
+     to: 
+         - recipes
+         - users
+orphanvertices:
+   - another
 ```
-You can also specify one or more of the following attributes. It is possible that a graph could be partially configured. If you specified a series of changes like removing orphan vertices and adding new edges, that the vertices maybe deleted, but the edges won't be added. Please watch the output for warnings.
+It is possible that a graph could be partially configured. If you specified a series of changes like removing orphan vertices and adding new edges, that the vertices maybe deleted, but the edges won't be added. Please watch the output for warnings.
+
+You must specify the graph, action as modify and the name of the graph. You can use these attributes to make changes.
+  * removevertices - []string names of the vertices to remove. If you attempt to remove a vertex included in an edge, the migration will fail.
+  * removeedges - []string the names of the edges you want to remove.
+  * orphanvertices - []string allows you to add vertices to the graph without included them in the edges. It will create a new vertex if the collection does not already exist.
+  * edgedefinitions - []EdgeDefinition names an edge and vertices that comprise the To and From. If the edge definition already exists, it gets updated to reflect the To, From relationship.
+
+### Delete a graph
+```yaml
+type: graph
+action: delete
+name: testing_graph
+```
 
 ### Indexes
 At present you can only create indexes. ArangoDB doesn't expose an API to properly identify indexes.
