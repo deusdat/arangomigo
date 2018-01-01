@@ -316,7 +316,6 @@ func (g Graph) migrate(ctx context.Context, db driver.Database, extras map[strin
 					From:       ed.From,
 				})
 		}
-		options.OrphanVertexCollections = g.OrphanVertices
 
 		// Map the Orphan Vertices
 		options.OrphanVertexCollections = g.OrphanVertices
