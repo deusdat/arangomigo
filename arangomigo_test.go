@@ -35,7 +35,7 @@ func TestFullMigration(t *testing.T) {
 
 	_, err = cl.Database(ctx, conf.Db)
 	if !driver.IsNotFound(err) {
-		t.Fatal("Database should not be there")
+		t.Fatal("Could not connect to the Database", err)
 	}
 
 	triggerMigration(configFile)
