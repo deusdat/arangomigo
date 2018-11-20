@@ -282,7 +282,7 @@ func (cl Collection) migrate(ctx context.Context, db driver.Database, extras map
 			options.WaitForSync = cl.WaitForSync
 		}
 		err = col.SetProperties(ctx, options)
-		return errors.Wrapf(err, "Couldn't update collection '%s'", col.Name)
+		return errors.Wrapf(err, "Couldn't update collection '%s'", col.Name())
 	}
 
 	return nil
