@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
-
 	"github.com/pkg/errors"
 
 	driver "github.com/arangodb/go-driver"
@@ -163,8 +163,11 @@ func loadDb(
 
 // Create the client used to talk to ArangoDB
 func client(ctx context.Context, c Config) (driver.Client, error) {
+	// TODO: Remove this tlsHack once I'm happy with the code, tests, etc.
+	tlsHack := tls.Config{InsecureSkipVerify: true}
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: c.Endpoints,
+		TLSConfig:&tlsHack,
 	})
 
 	if e(err) {

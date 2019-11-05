@@ -56,6 +56,9 @@ const (
 	keyFollowLeaderRedirect     ContextKey = "arangodb-followLeaderRedirect"
 	keyDBServerID               ContextKey = "arangodb-dbserverID"
 	keyBatchID                  ContextKey = "arangodb-batchID"
+	keyJobIDResponse            ContextKey = "arangodb-jobIDResponse"
+	keyAllowDirtyReads          ContextKey = "arangodb-allowDirtyReads"
+	keyTransactionID            ContextKey = "arangodb-transactionID"
 )
 
 // WithRevision is used to configure a context to make document
@@ -136,6 +139,14 @@ func WithWaitForSync(parent context.Context, value ...bool) context.Context {
 	return context.WithValue(contextOrBackground(parent), keyWaitForSync, v)
 }
 
+// WithAllowDirtyReads is used in an active failover deployment to allow reads from the follower.
+// You can pass a reference to a boolean that will set according to wether a potentially dirty read
+// happened or not. nil is allowed.
+// This is valid for document reads, aql queries, gharial vertex and edge reads.
+func WithAllowDirtyReads(parent context.Context, wasDirtyRead *bool) context.Context {
+	return context.WithValue(contextOrBackground(parent), keyAllowDirtyReads, wasDirtyRead)
+}
+
 // WithRawResponse is used to configure a context that will make all functions store the raw response into a
 // buffer.
 func WithRawResponse(parent context.Context, value *[]byte) context.Context {
@@ -213,6 +224,18 @@ func WithBatchID(parent context.Context, id string) context.Context {
 	return context.WithValue(contextOrBackground(parent), keyBatchID, id)
 }
 
+// WithJobIDResponse is used to configure a context that includes a reference to a JobID
+// that is filled on a error-free response.
+// This is used in cluster functions.
+func WithJobIDResponse(parent context.Context, jobID *string) context.Context {
+	return context.WithValue(contextOrBackground(parent), keyJobIDResponse, jobID)
+}
+
+// WithTransactionID is used to bind a request to a specific transaction
+func WithTransactionID(parent context.Context, tid TransactionID) context.Context {
+	return context.WithValue(contextOrBackground(parent), keyTransactionID, tid)
+}
+
 type contextSettings struct {
 	Silent                   bool
 	WaitForSync              bool
@@ -223,12 +246,38 @@ type contextSettings struct {
 	ImportDetails            *[]string
 	IsRestore                bool
 	IsSystem                 bool
+	AllowDirtyReads          bool
+	DirtyReadFlag            *bool
 	IgnoreRevs               *bool
 	EnforceReplicationFactor *bool
 	Configured               *bool
 	FollowLeaderRedirect     *bool
 	DBServerID               string
 	BatchID                  string
+	JobIDResponse            *string
+}
+
+// loadContextResponseValue loads generic values from the response and puts it into variables specified
+// via context values.
+func loadContextResponseValues(cs contextSettings, resp Response) {
+	// Parse potential dirty read
+	if cs.DirtyReadFlag != nil {
+		if dirtyRead := resp.Header("X-Arango-Potential-Dirty-Read"); dirtyRead != "" {
+			*cs.DirtyReadFlag = true // The documentation does not say anything about the actual value (dirtyRead == "true")
+		} else {
+			*cs.DirtyReadFlag = false
+		}
+	}
+}
+
+// setDirtyReadFlagIfRequired is a helper function that sets the bool reference for allowDirtyReads to the
+// specified value, if required and reference is not nil.
+func setDirtyReadFlagIfRequired(ctx context.Context, wasDirty bool) {
+	if v := ctx.Value(keyAllowDirtyReads); v != nil {
+		if ref, ok := v.(*bool); ok && ref != nil {
+			*ref = wasDirty
+		}
+	}
 }
 
 // applyContextSettings returns the settings configured in the context in the given request.
@@ -269,6 +318,18 @@ func applyContextSettings(ctx context.Context, req Request) contextSettings {
 			req.SetQuery("waitForSync", strconv.FormatBool(waitForSync))
 			result.WaitForSync = waitForSync
 		}
+	}
+	// AllowDirtyReads
+	if v := ctx.Value(keyAllowDirtyReads); v != nil {
+		req.SetHeader("x-arango-allow-dirty-read", "true")
+		result.AllowDirtyReads = true
+		if dirtyReadFlag, ok := v.(*bool); ok {
+			result.DirtyReadFlag = dirtyReadFlag
+		}
+	}
+	// TransactionID
+	if v := ctx.Value(keyTransactionID); v != nil {
+		req.SetHeader("x-arango-trx-id", string(v.(TransactionID)))
 	}
 	// ReturnOld
 	if v := ctx.Value(keyReturnOld); v != nil {
@@ -356,17 +417,13 @@ func applyContextSettings(ctx context.Context, req Request) contextSettings {
 			result.BatchID = id
 		}
 	}
-	return result
-}
-
-// okStatus returns one of the given status codes depending on the WaitForSync field value.
-// If WaitForSync==true, statusWithWaitForSync is returned, otherwise statusWithoutWaitForSync is returned.
-func (cs contextSettings) okStatus(statusWithWaitForSync, statusWithoutWaitForSync int) int {
-	if cs.WaitForSync {
-		return statusWithWaitForSync
-	} else {
-		return statusWithoutWaitForSync
+	// JobIDResponse
+	if v := ctx.Value(keyJobIDResponse); v != nil {
+		if idRef, ok := v.(*string); ok {
+			result.JobIDResponse = idRef
+		}
 	}
+	return result
 }
 
 // contextOrBackground returns the given context if it is not nil.

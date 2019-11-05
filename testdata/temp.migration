@@ -1,0 +1,20 @@
+type: view
+action: create
+name: TempView
+cleanupIntervalStep: 10
+commitIntervalMsec: 10
+consolidationIntervalMsec: 10
+links:
+    - name: users
+      analyzers:
+        - identity
+      fields:
+        - name: blah
+          fields:
+            - name: another
+      includeAllFields: false
+      storeValues: none
+      trackListPositions: false
+primarySort:
+    - field: firstName
+      ascending: true

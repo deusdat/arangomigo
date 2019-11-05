@@ -39,6 +39,7 @@ func (c *collection) DocumentExists(ctx context.Context, key string) (bool, erro
 	if err != nil {
 		return false, WithStack(err)
 	}
+	applyContextSettings(ctx, req)
 	resp, err := c.conn.Do(ctx, req)
 	if err != nil {
 		return false, WithStack(err)
@@ -59,6 +60,9 @@ func (c *collection) ReadDocument(ctx context.Context, key string, result interf
 	if err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
+	// This line introduces a lot of side effects. In particular If-Match headers are now set (which is a bugfix)
+	// and invalid query parameters like waitForSync (which is potentially breaking change)
+	cs := applyContextSettings(ctx, req)
 	resp, err := c.conn.Do(ctx, req)
 	if err != nil {
 		return DocumentMeta{}, WithStack(err)
@@ -71,6 +75,8 @@ func (c *collection) ReadDocument(ctx context.Context, key string, result interf
 	if err := resp.ParseBody("", &meta); err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
+	// load context response values
+	loadContextResponseValues(cs, resp)
 	// Parse result
 	if result != nil {
 		if err := resp.ParseBody("", result); err != nil {
@@ -78,6 +84,57 @@ func (c *collection) ReadDocument(ctx context.Context, key string, result interf
 		}
 	}
 	return meta, nil
+}
+
+// ReadDocuments reads multiple documents with given keys from the collection.
+// The documents data is stored into elements of the given results slice,
+// the documents meta data is returned.
+// If no document exists with a given key, a NotFoundError is returned at its errors index.
+func (c *collection) ReadDocuments(ctx context.Context, keys []string, results interface{}) (DocumentMetaSlice, ErrorSlice, error) {
+	resultsVal := reflect.ValueOf(results)
+	switch resultsVal.Kind() {
+	case reflect.Array, reflect.Slice:
+		// OK
+	default:
+		return nil, nil, WithStack(InvalidArgumentError{Message: fmt.Sprintf("results data must be of kind Array, got %s", resultsVal.Kind())})
+	}
+	if keys == nil {
+		return nil, nil, WithStack(InvalidArgumentError{Message: "keys nil"})
+	}
+	resultCount := resultsVal.Len()
+	if len(keys) != resultCount {
+		return nil, nil, WithStack(InvalidArgumentError{Message: fmt.Sprintf("expected %d keys, got %d", resultCount, len(keys))})
+	}
+	for _, key := range keys {
+		if err := validateKey(key); err != nil {
+			return nil, nil, WithStack(err)
+		}
+	}
+	req, err := c.conn.NewRequest("PUT", c.relPath("document"))
+	if err != nil {
+		return nil, nil, WithStack(err)
+	}
+	req = req.SetQuery("onlyget", "1")
+	cs := applyContextSettings(ctx, req)
+	if _, err := req.SetBodyArray(keys, nil); err != nil {
+		return nil, nil, WithStack(err)
+	}
+	resp, err := c.conn.Do(ctx, req)
+	if err != nil {
+		return nil, nil, WithStack(err)
+	}
+	if err := resp.CheckStatus(200); err != nil {
+		return nil, nil, WithStack(err)
+	}
+	// load context response values
+	loadContextResponseValues(cs, resp)
+	// Parse response array
+	metas, errs, err := parseResponseArray(resp, resultCount, cs, results)
+	if err != nil {
+		return nil, nil, WithStack(err)
+	}
+	return metas, errs, nil
+
 }
 
 // CreateDocument creates a single document in the collection.
@@ -103,7 +160,7 @@ func (c *collection) CreateDocument(ctx context.Context, document interface{}) (
 	if err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
-	if err := resp.CheckStatus(cs.okStatus(201, 202)); err != nil {
+	if err := resp.CheckStatus(201, 202); err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
 	if cs.Silent {
@@ -155,7 +212,7 @@ func (c *collection) CreateDocuments(ctx context.Context, documents interface{})
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
-	if err := resp.CheckStatus(cs.okStatus(201, 202)); err != nil {
+	if err := resp.CheckStatus(201, 202); err != nil {
 		return nil, nil, WithStack(err)
 	}
 	if cs.Silent {
@@ -163,7 +220,7 @@ func (c *collection) CreateDocuments(ctx context.Context, documents interface{})
 		return nil, nil, nil
 	}
 	// Parse response array
-	metas, errs, err := parseResponseArray(resp, documentCount, cs)
+	metas, errs, err := parseResponseArray(resp, documentCount, cs, nil)
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
@@ -196,7 +253,7 @@ func (c *collection) UpdateDocument(ctx context.Context, key string, update inte
 	if err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
-	if err := resp.CheckStatus(cs.okStatus(201, 202)); err != nil {
+	if err := resp.CheckStatus(201, 202); err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
 	if cs.Silent {
@@ -264,7 +321,7 @@ func (c *collection) UpdateDocuments(ctx context.Context, keys []string, updates
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
-	if err := resp.CheckStatus(cs.okStatus(201, 202)); err != nil {
+	if err := resp.CheckStatus(201, 202); err != nil {
 		return nil, nil, WithStack(err)
 	}
 	if cs.Silent {
@@ -272,7 +329,7 @@ func (c *collection) UpdateDocuments(ctx context.Context, keys []string, updates
 		return nil, nil, nil
 	}
 	// Parse response array
-	metas, errs, err := parseResponseArray(resp, updateCount, cs)
+	metas, errs, err := parseResponseArray(resp, updateCount, cs, nil)
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
@@ -305,7 +362,7 @@ func (c *collection) ReplaceDocument(ctx context.Context, key string, document i
 	if err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
-	if err := resp.CheckStatus(cs.okStatus(201, 202)); err != nil {
+	if err := resp.CheckStatus(201, 202); err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
 	if cs.Silent {
@@ -373,7 +430,7 @@ func (c *collection) ReplaceDocuments(ctx context.Context, keys []string, docume
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
-	if err := resp.CheckStatus(cs.okStatus(201, 202)); err != nil {
+	if err := resp.CheckStatus(201, 202); err != nil {
 		return nil, nil, WithStack(err)
 	}
 	if cs.Silent {
@@ -381,7 +438,7 @@ func (c *collection) ReplaceDocuments(ctx context.Context, keys []string, docume
 		return nil, nil, nil
 	}
 	// Parse response array
-	metas, errs, err := parseResponseArray(resp, documentCount, cs)
+	metas, errs, err := parseResponseArray(resp, documentCount, cs, nil)
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
@@ -407,7 +464,7 @@ func (c *collection) RemoveDocument(ctx context.Context, key string) (DocumentMe
 	if err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
-	if err := resp.CheckStatus(cs.okStatus(200, 202)); err != nil {
+	if err := resp.CheckStatus(200, 202); err != nil {
 		return DocumentMeta{}, WithStack(err)
 	}
 	if cs.Silent {
@@ -456,7 +513,7 @@ func (c *collection) RemoveDocuments(ctx context.Context, keys []string) (Docume
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
-	if err := resp.CheckStatus(cs.okStatus(201, 202)); err != nil {
+	if err := resp.CheckStatus(200, 202); err != nil {
 		return nil, nil, WithStack(err)
 	}
 	if cs.Silent {
@@ -464,7 +521,7 @@ func (c *collection) RemoveDocuments(ctx context.Context, keys []string) (Docume
 		return nil, nil, nil
 	}
 	// Parse response array
-	metas, errs, err := parseResponseArray(resp, keyCount, cs)
+	metas, errs, err := parseResponseArray(resp, keyCount, cs, nil)
 	if err != nil {
 		return nil, nil, WithStack(err)
 	}
@@ -572,7 +629,7 @@ func createMergeArray(keys, revs []string) ([]map[string]interface{}, error) {
 }
 
 // parseResponseArray parses an array response in the given response
-func parseResponseArray(resp Response, count int, cs contextSettings) (DocumentMetaSlice, ErrorSlice, error) {
+func parseResponseArray(resp Response, count int, cs contextSettings, results interface{}) (DocumentMetaSlice, ErrorSlice, error) {
 	resps, err := resp.ParseArrayBody()
 	if err != nil {
 		return nil, nil, WithStack(err)
@@ -581,6 +638,7 @@ func parseResponseArray(resp Response, count int, cs contextSettings) (DocumentM
 	errs := make(ErrorSlice, count)
 	returnOldVal := reflect.ValueOf(cs.ReturnOld)
 	returnNewVal := reflect.ValueOf(cs.ReturnNew)
+	resultsVal := reflect.ValueOf(results)
 	for i := 0; i < count; i++ {
 		resp := resps[i]
 		var meta DocumentMeta
@@ -604,6 +662,13 @@ func parseResponseArray(resp Response, count int, cs contextSettings) (DocumentM
 					if err := resp.ParseBody("new", returnNewEntryVal.Interface()); err != nil {
 						errs[i] = err
 					}
+				}
+			}
+			if results != nil {
+				// Parse compare result document
+				resultsEntryVal := resultsVal.Index(i).Addr()
+				if err := resp.ParseBody("", resultsEntryVal.Interface()); err != nil {
+					errs[i] = err
 				}
 			}
 		}

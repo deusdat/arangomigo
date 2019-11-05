@@ -1,0 +1,10 @@
+type: view
+action: modify
+name: testing_view
+links:
+    - name: recipes
+      analyzers:
+      - text_en
+      includeAllFields: false
+      fields:
+      - name: name

@@ -1,8 +1,8 @@
 # Test configuration to make sure the system can create a complex db
 endpoints:
-   - http://arangodb-local:8529
+   - https://192.168.99.100:30013
 username: root
-password: devroot
+password:
 migrationspath: testdata/complete
 db: MigoFull
 extras:
