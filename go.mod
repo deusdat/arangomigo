@@ -1,4 +1,4 @@
-module github.com/sleepycat/arangomigo
+module github.com/deusdat/arangomigo
 
 require (
 	github.com/arangodb/go-driver v0.0.0-20191028094806-4407cf842de1
