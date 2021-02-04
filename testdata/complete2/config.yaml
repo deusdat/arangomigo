@@ -3,8 +3,10 @@ endpoints:
    - http://localhost:1234
 username: root
 password: simple
-migrationspath: testdata/complete
-db: MigoFull
+migrationspath:
+   - testdata/complete2
+   - testdata/complete2/dir2
+db: MigoFull2
 extras:
   {patricksUser: jdavenpo,
    patricksPassword: L33t5uck3r5,

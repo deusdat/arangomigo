@@ -57,7 +57,7 @@ func loadConf(confLoc string) (*Config, error) {
 	}
 
 	conf := Config{}
-	err = yaml.UnmarshalStrict(bytes, &conf)
+	err = yaml.Unmarshal(bytes, &conf)
 	if e(err) {
 		return nil, errors.Wrapf(err, "Couldn't parse configation at path '%s'", confLoc)
 	}
@@ -73,12 +73,30 @@ func loadConf(confLoc string) (*Config, error) {
 	return &conf, nil
 }
 
+type StringArray []string
+
+func (a *StringArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var multi []string
+	err := unmarshal(&multi)
+	if err != nil {
+		var single string
+		err = unmarshal(&single)
+		if err != nil {
+			return err
+		}
+		*a = []string{single}
+	} else {
+		*a = multi
+	}
+	return nil
+}
+
 // Config The content of a migration configuration.
 type Config struct {
 	Endpoints      []string
 	Username       string
 	Password       string
-	MigrationsPath string
+	MigrationsPath StringArray
 	Db             string
 	// Extras allows the user to pass in replaced variables
 	Extras map[string]interface{}

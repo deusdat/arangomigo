@@ -36,8 +36,7 @@ extras:
 ArangoMiGO supports fail over out of the box: `endpoints`. If you are creating a database as part of the
 migration set, make sure that the username has the proper rights. 
 
-`migrationspath` is the directory holding
-the migration configurations. At this time ArangoMiGO does not support nested directories. 
+`migrationspath` is the directory holding the migration configurations. You may specify a single value like `migrationspath: some/where/to/migrations` or you can specify a list. 
 
 `db` is the name of the target database. If you create the database as part of the migration, the name in the config and in the migration must match.
 

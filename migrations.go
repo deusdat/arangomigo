@@ -235,21 +235,21 @@ var validVersion = regexp.MustCompile(`^\d*(\.\d*)*?$`)
 
 // Pairs migrations together.
 // Returns an error if unable to find migrations.
-func migrations(path string) ([]PairedMigrations, error) {
-	migrations, err := loadFrom(path)
-	if err != nil {
-		return nil, err
-	}
-	if len(migrations) == 0 {
-		return nil, errors.New("Could not find migrations at path '" + path + "'")
-	}
+func migrations(paths []string) ([]PairedMigrations, error) {
 	var pms []PairedMigrations
-
-	for _, m := range migrations {
-		pm := PairedMigrations{change: m, undo: nil}
-		pms = append(pms, pm)
+	for _, path := range paths {
+		ms, err := loadFrom(path)
+		if err != nil {
+			return nil, err
+		}
+		if len(ms) == 0 {
+			return nil, errors.New("Could not find migrations at path '" + path + "'")
+		}
+		for _, m := range ms {
+			pm := PairedMigrations{change: m, undo: nil}
+			pms = append(pms, pm)
+		}
 	}
-
 	return pms, nil
 }
 

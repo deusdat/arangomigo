@@ -10,6 +10,17 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestConfigLoad(t *testing.T) {
+	configFile := "testdata/complete/config.yaml"
+	conf, err := loadConf(configFile)
+	if e(err) {
+		log.Fatal(err)
+	}
+	if len(conf.MigrationsPath) != 1 {
+		log.Fatal("Invalid migration path")
+	}
+}
+
 func TestFullMigration(t *testing.T) {
 	configFile := "testdata/complete/config.yaml"
 
@@ -79,6 +90,56 @@ func TestFullMigration(t *testing.T) {
 	sort.Strings(justNames)
 
 	assert.Equal(t, []string{"another", "recipes", "users"}, justNames)
+}
+
+func TestMultiPathMigration(t *testing.T) {
+	configFile := "testdata/complete2/config.yaml"
+
+	conf, err := loadConf(configFile)
+	if e(err) {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	cl, err := client(ctx, *conf)
+	if e(err) {
+		log.Fatal(err)
+	}
+
+	db, err := cl.Database(ctx, conf.Db)
+	if err == nil {
+		err := db.Remove(ctx)
+		if e(err) {
+			t.Fatal("Couldn't prepare for test")
+		}
+	}
+
+	_, err = cl.Database(ctx, conf.Db)
+	if !driver.IsNotFound(err) {
+		t.Fatal("Could not connect to the Database", err)
+	}
+
+	triggerMigration(configFile)
+
+	// Look to see if everything was made properly.
+	db, err = cl.Database(ctx, conf.Db)
+	assert.NoError(t, err, "Unable to find the database")
+
+	recipes, err := db.Collection(ctx, "Recipes")
+	assert.NoError(t, err, "Could not find recipes collection")
+
+	// Should find the custom recipe inserted by AQL.
+
+	// Can't really tell which indexes are available, just that recipes should have
+	// 6: 1 for the PK and 5 others.
+	idxs, err := recipes.Indexes(ctx)
+	assert.Equal(t, 1, len(idxs), "Recipes should have 1 index")
+
+	// Make sure wait for sync sticks.
+	colprop, err := recipes.Properties(ctx)
+	assert.NotNil(t, colprop, "Should have the collection properties")
+	assert.False(t, colprop.WaitForSync, "Should wait for sync.")
 }
 
 type recipe struct {
