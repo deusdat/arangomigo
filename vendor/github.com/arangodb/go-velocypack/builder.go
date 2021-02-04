@@ -678,9 +678,7 @@ func (b *Builder) addCompoundValue(vType byte) {
 		toAdd--
 	}
 	b.index[stackLen-1].Clear()
-	dst := b.buf.Grow(9)
-	dst[0] = vType
-	//b.buf.WriteBytes(0, 8) // Will be filled later with bytelength and nr subs
+	b.buf.Write([]byte{vType, 0, 0, 0, 0, 0, 0, 0, 0})
 }
 
 // closeEmptyArrayOrObject closes an empty array/object, removing the pre-allocated length space.

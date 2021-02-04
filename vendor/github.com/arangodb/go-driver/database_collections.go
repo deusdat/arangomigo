@@ -52,6 +52,10 @@ type CreateCollectionOptions struct {
 	// before the write operation is reported successful. If a server fails, this is detected automatically
 	// and one of the servers holding copies take over, usually without an error being reported.
 	ReplicationFactor int `json:"replicationFactor,omitempty"`
+	// MinReplicationFactor contains how many copies must be available before a collection can be written.
+	// It is required that 1 <= MinReplicationFactor <= ReplicationFactor.
+	// Default is 1. Not available for satellite collections.
+	MinReplicationFactor int `json:"minReplicationFactor,omitempty"`
 	// If true then the data is synchronized to disk before returning from a document create, update, replace or removal operation. (default: false)
 	WaitForSync bool `json:"waitForSync,omitempty"`
 	// Whether or not the collection will be compacted (default is true)
@@ -89,12 +93,21 @@ type CreateCollectionOptions struct {
 	// This field is used for internal purposes only. DO NOT USE.
 	DistributeShardsLike string `json:"distributeShardsLike,omitempty"`
 	// Set to create a smart edge or vertex collection.
-	// This requires ArangoDB enterprise.
+	// This requires ArangoDB Enterprise Edition.
 	IsSmart bool `json:"isSmart,omitempty"`
 	// This field must be set to the attribute that will be used for sharding or smart graphs.
 	// All vertices are required to have this attribute set. Edges derive the attribute from their connected vertices.
-	// This requires ArangoDB enterprise.
+	// This requires ArangoDB Enterprise Edition.
 	SmartGraphAttribute string `json:"smartGraphAttribute,omitempty"`
+	// SmartJoinAttribute
+	// In the specific case that the two collections have the same number of shards, the data of the two collections can
+	// be co-located on the same server for the same shard key values. In this case the extra hop via the coordinator will not be necessary.
+	// See documentation for smart joins.
+	// This requires ArangoDB Enterprise Edition.
+	SmartJoinAttribute string `json:"smartJoinAttribute,omitempty"`
+	// This attribute specifies the name of the sharding strategy to use for the collection.
+	// Must be one of ShardingStrategy* values.
+	ShardingStrategy ShardingStrategy `json:"shardingStrategy,omitempty"`
 }
 
 // CollectionType is the type of a collection.
@@ -127,4 +140,15 @@ type KeyGeneratorType string
 const (
 	KeyGeneratorTraditional   = KeyGeneratorType("traditional")
 	KeyGeneratorAutoIncrement = KeyGeneratorType("autoincrement")
+)
+
+// ShardingStrategy describes the sharding strategy of a collection
+type ShardingStrategy string
+
+const (
+	ShardingStrategyCommunityCompat           ShardingStrategy = "community-compat"
+	ShardingStrategyEnterpriseCompat          ShardingStrategy = "enterprise-compat"
+	ShardingStrategyEnterpriseSmartEdgeCompat ShardingStrategy = "enterprise-smart-edge-compat"
+	ShardingStrategyHash                      ShardingStrategy = "hash"
+	ShardingStrategyEnterpriseHashSmartEdge   ShardingStrategy = "enterprise-hash-smart-edge"
 )

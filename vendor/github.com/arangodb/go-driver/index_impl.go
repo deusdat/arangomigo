@@ -28,8 +28,32 @@ import (
 	"strings"
 )
 
+// indexStringToType converts a string representation of an index to IndexType
+func indexStringToType(indexTypeString string) (IndexType, error) {
+	switch indexTypeString {
+	case string(FullTextIndex):
+		return FullTextIndex, nil
+	case string(HashIndex):
+		return HashIndex, nil
+	case string(SkipListIndex):
+		return SkipListIndex, nil
+	case string(PrimaryIndex):
+		return PrimaryIndex, nil
+	case string(PersistentIndex):
+		return PersistentIndex, nil
+	case string(GeoIndex), "geo1", "geo2":
+		return GeoIndex, nil
+	case string(EdgeIndex):
+		return EdgeIndex, nil
+	case string(TTLIndex):
+		return TTLIndex, nil
+	default:
+		return "", WithStack(InvalidArgumentError{Message: "unknown index type"})
+	}
+}
+
 // newIndex creates a new Index implementation.
-func newIndex(id string, col *collection) (Index, error) {
+func newIndex(id string, indexTypeString string, name string, col *collection) (Index, error) {
 	if id == "" {
 		return nil, WithStack(InvalidArgumentError{Message: "id is empty"})
 	}
@@ -40,19 +64,27 @@ func newIndex(id string, col *collection) (Index, error) {
 	if col == nil {
 		return nil, WithStack(InvalidArgumentError{Message: "col is nil"})
 	}
+	indexType, err := indexStringToType(indexTypeString)
+	if err != nil {
+		return nil, WithStack(err)
+	}
 	return &index{
-		id:   id,
-		col:  col,
-		db:   col.db,
-		conn: col.conn,
+		id:        id,
+		name:      name,
+		indexType: indexType,
+		col:       col,
+		db:        col.db,
+		conn:      col.conn,
 	}, nil
 }
 
 type index struct {
-	id   string
-	db   *database
-	col  *collection
-	conn Connection
+	id        string
+	name      string
+	indexType IndexType
+	db        *database
+	col       *collection
+	conn      Connection
 }
 
 // relPath creates the relative path to this index (`_db/<db-name>/_api/index`)
@@ -64,6 +96,21 @@ func (i *index) relPath() string {
 func (i *index) Name() string {
 	parts := strings.Split(i.id, "/")
 	return parts[1]
+}
+
+// ID returns the ID of the index.
+func (i *index) ID() string {
+	return i.id
+}
+
+// UserName returns the user provided name of the index or empty string if non is provided.
+func (i *index) UserName() string {
+	return i.name
+}
+
+// Type returns the type of the index
+func (i *index) Type() IndexType {
+	return i.indexType
 }
 
 // Remove removes the entire index.

@@ -46,8 +46,14 @@ type Database interface {
 	// Collection functions
 	DatabaseCollections
 
+	// View functions
+	DatabaseViews
+
 	// Graph functions
 	DatabaseGraphs
+
+	// Streaming Transactions functions
+	DatabaseStreamingTransactions
 
 	// Query performs an AQL query, returning a cursor used to iterate over the returned documents.
 	// Note that the returned Cursor must always be closed to avoid holding on to resources in the server while they are no longer needed.

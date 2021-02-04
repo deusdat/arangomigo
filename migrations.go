@@ -46,6 +46,7 @@ var geoidx = regexp.MustCompile(`^type:\sgeoindex`)
 var hashidx = regexp.MustCompile(`^type:\shashindex`)
 var persistentidx = regexp.MustCompile(`^type:\spersistentindex`)
 var skipidx = regexp.MustCompile(`^type:\sskiplistindex`)
+var view = regexp.MustCompile(`^type:\sview`)
 
 // User the data used to update a user account
 type User struct {
@@ -166,6 +167,68 @@ type Graph struct {
 type PairedMigrations struct {
 	change Migration
 	undo   Migration
+}
+
+// SearchView contains all the information needed to create an Arango Search SearchView.
+type SearchView struct {
+	Operation `yaml:",inline"`
+	// CleanupIntervalStep specifies the minimum number of commits to wait between
+	// removing unused files in the data directory.
+	CleanupIntervalStep *int64 `yaml:"cleanupIntervalStep,omitempty"`
+	// CommitInterval ArangoSearch waits at least this many milliseconds between committing
+	// view data store changes and making documents visible to queries
+	CommitIntervalMsec *int64 `yaml:"commitIntervalMsec,omitempty"`
+	// ConsolidationInterval specifies the minimum number of milliseconds that must be waited
+	// between committing index data changes and making them visible to queries.
+	ConsolidationIntervalMsec *int64 `yaml:"consolidationIntervalMsec,omitempty"`
+	// ConsolidationPolicy specifies thresholds for consolidation.
+	ConsolidationPolicy *ConsolidationPolicy `yaml:"consolidationPolicy,omitempty"`
+	// SortFields lists the fields that used for sorting.
+	SortFields []SortField `yaml:"primarySort,omitempty"`
+	// Links contains the properties for how individual collections
+	// are indexed in thie view.
+	Links []SearchElementProperties `yaml:"links,omitempty"`
+}
+
+// ConsolidationPolicy holds threshold values specifying when to
+// consolidate view data.
+// see ArangoSearchConsolidationPolicy
+//     ArangoSearchConsolidationPolicyTier
+//     ArangoSearchConsolidationPolicyBytesAccum
+type ConsolidationPolicy struct {
+	// Type returns the type of the ConsolidationPolicy.
+	Type string
+	// Options contains the fields used by the ConsolidationPolicy and are related to the Type.
+	Options map[string]interface{}
+}
+
+// SortField describes a field and whether its ascending or not used for primary search.
+type SortField struct {
+	// The name of the field.
+	Field string
+	// Whether the field is ascending or descending.
+	Ascending *bool `yaml:"ascending,omitempty"`
+}
+
+// SearchElementProperties contains properties that specify how an element
+// is indexed in an ArangoSearch view.
+// Note that this structure is recursive. Settings not specified (nil)
+// at a given level will inherit their setting from a lower level.
+type SearchElementProperties struct {
+	// Name of the element (e.g. collection name)
+	Name string
+	// The list of analyzers to be used for indexing of string values. Defaults to ["identify"].
+	// NOTE: They much be defined in Arango.
+	Analyzers []string `yaml:"analyzers,omitempty"`
+	// Fields contains the properties for individual fields of the element.
+	Fields []SearchElementProperties `yaml:"fields,omitempty"`
+	// If set to true, all fields of this element will be indexed. Defaults to false.
+	IncludeAllFields *bool `yaml:"includeAllFields,omitempty"`
+	// This values specifies how the view should track values.
+	// see ArangoSearchStoreValues
+	StoreValues *string `yaml:"storeValues,omitempty"`
+	// If set to true, values in a listed are treated as separate values. Defaults to false.
+	TrackListPositions *bool `yaml:"trackListPositions,omitempty"`
 }
 
 var validVersion = regexp.MustCompile(`^\d*(\.\d*)*?$`)
@@ -312,6 +375,8 @@ func pickT(contents []byte) (Migration, error) {
 		return new(PersistentIndex), nil
 	case skipidx.MatchString(s):
 		return new(SkiplistIndex), nil
+	case view.MatchString(s):
+		return new(SearchView), nil
 	default:
 		return nil, errors.New("Can't determine YAML type")
 	}

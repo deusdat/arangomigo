@@ -116,6 +116,27 @@ type CollectionProperties struct {
 	// ReplicationFactor contains how many copies of each shard are kept on different DBServers.
 	// Only available in cluster setup.
 	ReplicationFactor int `json:"replicationFactor,omitempty"`
+	// MinReplicationFactor contains how many copies must be available before a collection can be written.
+	// It is required that 1 <= MinReplicationFactor <= ReplicationFactor.
+	// Default is 1. Not available for satellite collections.
+	MinReplicationFactor int `json:"minReplicationFactor,omitempty"`
+	// SmartJoinAttribute
+	// See documentation for smart joins.
+	// This requires ArangoDB Enterprise Edition.
+	SmartJoinAttribute string `json:"smartJoinAttribute,omitempty"`
+	// This attribute specifies the name of the sharding strategy to use for the collection.
+	// Can not be changed after creation.
+	ShardingStrategy ShardingStrategy `json:"shardingStrategy,omitempty"`
+}
+
+const (
+	// ReplicationFactorSatellite represents a satellite collection's replication factor
+	ReplicationFactorSatellite int = -1
+)
+
+// IsSatellite returns true if the collection is a satellite collection
+func (p *CollectionProperties) IsSatellite() bool {
+	return p.ReplicationFactor == ReplicationFactorSatellite
 }
 
 // SetCollectionPropertiesOptions contains data for Collection.SetProperties.
@@ -127,6 +148,8 @@ type SetCollectionPropertiesOptions struct {
 	// ReplicationFactor contains how many copies of each shard are kept on different DBServers.
 	// Only available in cluster setup.
 	ReplicationFactor int `json:"replicationFactor,omitempty"`
+	// MinReplicationFactor contains how many copies must be available before a collection can be written.
+	MinReplicationFactor int `json:"minReplicationFactor,omitempty"`
 }
 
 // CollectionStatus indicates the status of a collection.

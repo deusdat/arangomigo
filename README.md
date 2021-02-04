@@ -16,7 +16,7 @@ To your executable pass the path to the configuration file, which is defined bel
 
 ## Creating your structures
 
-ArangoMiGO supports creating, modifying, and deleting graphs, collections, indexes, and even the database. Below you'll see how to use YAML to create a migration set. Once a migration component executes, the system doesn't rerun it. You don't have to worry about creating a collection or running data migration twice.
+ArangoMiGO supports creating, modifying, and deleting graphs, collections, indexes, views, and even the database. Below you'll see how to use YAML to create a migration set. Once a migration component executes, the system doesn't rerun it. You don't have to worry about creating a collection or running data migration twice.
 
 ### Creating the configuration file
 ```yaml
@@ -235,7 +235,7 @@ sparse: true
 nodeduplicate: false
 ```
 
-**Persisten Index**
+**Persistent Index**
 ```yaml
 type: persistentindex
 action: create
@@ -257,4 +257,59 @@ collection: recipes
 unique: true
 sparse: true
 nodeduplicate: true
+```
+
+### Views
+Views were added to Arango 3.4.  They allow provide a way to search on collections.
+See [Arango Search View](https://www.arangodb.com/docs/3.5/arangosearch.html) for more information.
+**Note:** For creating and modifying, if the analyzers are defined they must already be defined
+in the Arango DB ([Analzyers](https://www.arangodb.com/docs/3.5/arangosearch-analyzers.html))
+
+**Create View**
+```yaml 
+type: view
+action: create
+name: SearchRecipes
+links:
+    - name: recipe
+      analyzers:
+        - identity
+      fields:
+        - name: name
+      includeAllFields: false
+      storeValues: none
+      trackListPositions: false
+primarySort:z
+    - field: name
+      ascending: false
+```
+This example creates a view in the database named in the config file and sets a linked collection (recipes) 
+with a primary sort on the name field. You can also add the following features:
+  * cleanupIntervalStep - integer
+  * commitIntervalMsec - integer
+  * consolidationIntervalMsec - integer
+  
+If you don't include a specific property, Arango applies its own default.
+
+**Modify View**
+```yaml 
+type: view
+action: modify
+name: SearchRecipes
+links:
+    - name: recipe
+      analyzers:
+        - identity
+      fields:
+        - name: name
+      includeAllFields: false
+      storeValues: none
+      trackListPositions: false
+```
+
+**Delete View**
+```yaml 
+type: view
+action: delete
+name: SearchRecipes
 ```

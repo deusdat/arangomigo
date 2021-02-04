@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-
 	"github.com/pkg/errors"
 
 	driver "github.com/arangodb/go-driver"

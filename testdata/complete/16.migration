@@ -1,0 +1,8 @@
+type: view
+action: create
+name: testing_view
+links:
+    - name: recipes
+      analyzers:
+      - text_en
+      includeAllFields: true

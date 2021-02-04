@@ -43,8 +43,16 @@ type Cluster interface {
 	// CleanOutServer triggers activities to clean out a DBServer.
 	CleanOutServer(ctx context.Context, serverID string) error
 
+	// ResignServer triggers activities to let a DBServer resign for all shards.
+	ResignServer(ctx context.Context, serverID string) error
+
 	// IsCleanedOut checks if the dbserver with given ID has been cleaned out.
 	IsCleanedOut(ctx context.Context, serverID string) (bool, error)
+
+	// RemoveServer is a low-level option to remove a server from a cluster.
+	// This function is suitable for servers of type coordinator or dbserver.
+	// The use of `ClientServerAdmin.Shutdown` is highly recommended above this function.
+	RemoveServer(ctx context.Context, serverID ServerID) error
 }
 
 // ServerID identifies an arangod server in a cluster.
@@ -59,17 +67,40 @@ type ClusterHealth struct {
 	Health map[ServerID]ServerHealth `json:"Health"`
 }
 
+// ServerSyncStatus describes the servers sync status
+type ServerSyncStatus string
+
+const (
+	ServerSyncStatusUnknown   ServerSyncStatus = "UNKNOWN"
+	ServerSyncStatusUndefined ServerSyncStatus = "UNDEFINED"
+	ServerSyncStatusStartup   ServerSyncStatus = "STARTUP"
+	ServerSyncStatusStopping  ServerSyncStatus = "STOPPING"
+	ServerSyncStatusStopped   ServerSyncStatus = "STOPPED"
+	ServerSyncStatusServing   ServerSyncStatus = "SERVING"
+	ServerSyncStatusShutdown  ServerSyncStatus = "SHUTDOWN"
+)
+
 // ServerHealth contains health information of a single server in a cluster.
 type ServerHealth struct {
-	Endpoint            string       `json:"Endpoint"`
-	LastHeartbeatAcked  time.Time    `json:"LastHeartbeatAcked"`
-	LastHeartbeatSent   time.Time    `json:"LastHeartbeatSent"`
-	LastHeartbeatStatus string       `json:"LastHeartbeatStatus"`
-	Role                ServerRole   `json:"Role"`
-	ShortName           string       `json:"ShortName"`
-	Status              ServerStatus `json:"Status"`
-	CanBeDeleted        bool         `json:"CanBeDeleted"`
-	HostID              string       `json:"Host,omitempty"`
+	Endpoint            string           `json:"Endpoint"`
+	LastHeartbeatAcked  time.Time        `json:"LastHeartbeatAcked"`
+	LastHeartbeatSent   time.Time        `json:"LastHeartbeatSent"`
+	LastHeartbeatStatus string           `json:"LastHeartbeatStatus"`
+	Role                ServerRole       `json:"Role"`
+	ShortName           string           `json:"ShortName"`
+	Status              ServerStatus     `json:"Status"`
+	CanBeDeleted        bool             `json:"CanBeDeleted"`
+	HostID              string           `json:"Host,omitempty"`
+	Version             Version          `json:"Version,omitempty"`
+	Engine              EngineType       `json:"Engine,omitempty"`
+	SyncStatus          ServerSyncStatus `json:"SyncStatus,omitempty"`
+
+	// Only for Coordinators
+	AdvertisedEndpoint *string `json:"AdvertisedEndpoint,omitempty"`
+
+	// Only for Agents
+	Leader  *string `json:"Leader,omitempty"`
+	Leading *bool   `json:"Leading,omitempty"`
 }
 
 // ServerStatus describes the health status of a server
@@ -88,6 +119,8 @@ const (
 type DatabaseInventory struct {
 	// Details of all collections
 	Collections []InventoryCollection `json:"collections,omitempty"`
+	// Details of all views
+	Views []InventoryView `json:"views,omitempty"`
 }
 
 // IsReady returns true if the IsReady flag of all collections is set.
@@ -119,6 +152,17 @@ func (i DatabaseInventory) CollectionByName(name string) (InventoryCollection, b
 	return InventoryCollection{}, false
 }
 
+// ViewByName returns the InventoryView with given name.
+// Return false if not found.
+func (i DatabaseInventory) ViewByName(name string) (InventoryView, bool) {
+	for _, v := range i.Views {
+		if v.Name == name {
+			return v, true
+		}
+	}
+	return InventoryView{}, false
+}
+
 // InventoryCollection is a single element of a DatabaseInventory, containing all information
 // of a specific collection.
 type InventoryCollection struct {
@@ -126,6 +170,7 @@ type InventoryCollection struct {
 	Indexes     []InventoryIndex              `json:"indexes,omitempty"`
 	PlanVersion int64                         `json:"planVersion,omitempty"`
 	IsReady     bool                          `json:"isReady,omitempty"`
+	AllInSync   bool                          `json:"allInSync,omitempty"`
 }
 
 // IndexByFieldsAndType returns the InventoryIndex with given fields & type.
@@ -161,12 +206,20 @@ type InventoryCollectionParameters struct {
 	Path                 string                 `json:"path,omitempty"`
 	PlanID               string                 `json:"planId,omitempty"`
 	ReplicationFactor    int                    `json:"replicationFactor,omitempty"`
+	MinReplicationFactor int                    `json:"minReplicationFactor,omitempty"`
 	ShardKeys            []string               `json:"shardKeys,omitempty"`
 	Shards               map[ShardID][]ServerID `json:"shards,omitempty"`
 	Status               CollectionStatus       `json:"status,omitempty"`
 	Type                 CollectionType         `json:"type,omitempty"`
 	WaitForSync          bool                   `json:"waitForSync,omitempty"`
 	DistributeShardsLike string                 `json:"distributeShardsLike,omitempty"`
+	SmartJoinAttribute   string                 `json:"smartJoinAttribute,omitempty"`
+	ShardingStrategy     ShardingStrategy       `json:"shardingStrategy,omitempty"`
+}
+
+// IsSatellite returns true if the collection is a satellite collection
+func (icp *InventoryCollectionParameters) IsSatellite() bool {
+	return icp.ReplicationFactor == ReplicationFactorSatellite
 }
 
 // ShardID is an internal identifier of a specific shard
@@ -182,6 +235,8 @@ type InventoryIndex struct {
 	Deduplicate bool     `json:"deduplicate"`
 	MinLength   int      `json:"minLength,omitempty"`
 	GeoJSON     bool     `json:"geoJson,omitempty"`
+	Name        string   `json:"name,omitempty"`
+	ExpireAfter int      `json:"expireAfter,omitempty"`
 }
 
 // FieldsEqual returns true when the given fields list equals the
@@ -189,6 +244,19 @@ type InventoryIndex struct {
 // The order of fields is irrelevant.
 func (i InventoryIndex) FieldsEqual(fields []string) bool {
 	return stringSliceEqualsIgnoreOrder(i.Fields, fields)
+}
+
+// InventoryView is a single element of a DatabaseInventory, containing all information
+// of a specific view.
+type InventoryView struct {
+	Name     string   `json:"name,omitempty"`
+	Deleted  bool     `json:"deleted,omitempty"`
+	ID       string   `json:"id,omitempty"`
+	IsSystem bool     `json:"isSystem,omitempty"`
+	PlanID   string   `json:"planId,omitempty"`
+	Type     ViewType `json:"type,omitempty"`
+	// Include all properties from an arangosearch view.
+	ArangoSearchViewProperties
 }
 
 // stringSliceEqualsIgnoreOrder returns true when the given lists contain the same elements.
