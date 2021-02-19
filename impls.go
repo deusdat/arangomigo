@@ -246,6 +246,12 @@ func (cl Collection) migrate(ctx context.Context, db driver.Database, extras map
 		if cl.Volatile != nil {
 			options.IsVolatile = *cl.Volatile
 		}
+		if cl.CollectionType != "" {
+			options.Type = driver.CollectionTypeDocument
+			if cl.CollectionType == "edge" {
+				options.Type = driver.CollectionTypeEdge
+			}
+		}
 		// Configures the user keys
 		ko := driver.CollectionKeyOptions{}
 		if cl.AllowUserKeys != nil {
