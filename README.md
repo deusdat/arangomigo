@@ -10,7 +10,7 @@ sharding collections on distributed systems. This means that we can't rely on cr
 ### Supports Arango 3.1+.
 
 ## Getting an executable
-If you're familiar with Go, you can clone and build this project directly on your target machine. If you'd prefer an official build, look in the dist directory of the project.
+If you're familiar with Go, you can clone and build this project directly on your target machine. If you'd prefer an official build, look in the releases of the project.
 
 To your executable pass the path to the configuration file, which is defined below. 
 
@@ -312,3 +312,8 @@ type: view
 action: delete
 name: SearchRecipes
 ```
+
+## Build into your go software
+
+Instead of using the binary amd yaml files you can also embed the migrations directly from your go code. See 
+[perform_test.go](perform_test.go) for an example. 

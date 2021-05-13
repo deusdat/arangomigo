@@ -13,8 +13,11 @@
 # Project-local glide cache, RE: https://github.com/Masterminds/glide/issues/736
 .glide/
 arangomigo
+!cmd/arangomigo
 .project
 .settings/
 .idea
 
 *.iml
+debug
+.vscode

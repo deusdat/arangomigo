@@ -1,4 +1,4 @@
-package main
+package arangomigo
 
 import (
 	"context"
@@ -49,7 +49,7 @@ func TestFullMigration(t *testing.T) {
 		t.Fatal("Could not connect to the Database", err)
 	}
 
-	triggerMigration(configFile)
+	TriggerMigration(configFile)
 
 	// Look to see if everything was made properly.
 	db, err = cl.Database(ctx, conf.Db)
@@ -120,7 +120,7 @@ func TestMultiPathMigration(t *testing.T) {
 		t.Fatal("Could not connect to the Database", err)
 	}
 
-	triggerMigration(configFile)
+	TriggerMigration(configFile)
 
 	// Look to see if everything was made properly.
 	db, err = cl.Database(ctx, conf.Db)
