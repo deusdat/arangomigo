@@ -9,10 +9,7 @@ on:
 jobs:
   arangomigo:
     name: arangomigo
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ windows-latest, ubuntu-latest ]
+    runs-on: ubuntu-latest
     steps:
       - name: Setup go 1.16
         uses: actions/setup-go@v2
