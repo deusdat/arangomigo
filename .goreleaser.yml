@@ -1,0 +1,26 @@
+project_name: arangomigo
+builds:
+  - dir: cmd/arangomigo
+    binary: arangomigo
+    goos: [ linux, windows, darwin ]
+archives:
+  - replacements:
+      darwin: macOS
+      linux: Linux
+      windows: Windows
+    format_overrides:
+      - goos: windows
+        format: zip
+
+nfpms:
+  - replacements:
+      darwin: macOS
+      linux: Linux
+    homepage: "https://github.com/deusdat/arangomigo"
+    maintainer: DeusDat Solutions
+    description: "Migrations for ArangoDB"
+    license: MIT
+    formats:
+      - apk
+      - deb
+      - rpm
