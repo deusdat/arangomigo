@@ -31,7 +31,7 @@ jobs:
 
       - name: Test
         run: |
-          docker run -p 1234:8529 -e ARANGO_ROOT_PASSWORD=simple arangodb/arangodb:3.7.2.1 -d
+          docker run -d -p 1234:8529 -e ARANGO_ROOT_PASSWORD=simple arangodb/arangodb:3.7.2.1
           sleep 10
           go test ./...
         shell: bash
