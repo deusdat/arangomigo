@@ -2,10 +2,6 @@ package arangomigo
 
 import (
 	"context"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
-
 	driver "github.com/arangodb/go-driver"
 )
 
@@ -28,6 +24,7 @@ func (mc MockCol) Name() string {
 	return mc.name
 }
 
+/*
 func TestHashRejectDelete(t *testing.T) {
 	hi := HashIndex{}
 	hi.Action = DELETE
@@ -96,3 +93,4 @@ func TestSkipListRejectDelete(t *testing.T) {
 	//})
 	assert.EqualError(t, err, "Due to Arango API limitations, you cannot delete an index")
 }
+*/
