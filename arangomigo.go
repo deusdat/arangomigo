@@ -1,35 +1,17 @@
 /*
-Package main allows the tool to execute from the command line.
+Package arangomigo allows the tool to execute from the command line.
 */
-package main
+package arangomigo
 
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
-
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
+	"log"
 )
 
-const (
-	waitOnDb  = 0
-	defaultDb = "_system"
-)
-
-func main() {
-	configAt := ""
-	if len(os.Args) > 1 {
-		configAt = os.Args[1]
-	} else {
-		log.Fatal("Please specify the path for the configuration")
-	}
-
-	triggerMigration(configAt)
-}
-
-func triggerMigration(configAt string) {
+func TriggerMigration(configAt string) {
 	config, err := loadConf(configAt)
 	if e(err) {
 		log.Fatal(err)
@@ -46,7 +28,13 @@ func triggerMigration(configAt string) {
 
 func migrate(c Config) error {
 	ctx := context.Background()
-	return perform(ctx, c)
+
+	pm, err := migrations(c.MigrationsPath)
+	if e(err) {
+		return err
+	}
+
+	return perform(ctx, c, pm)
 }
 
 // Reads in a yaml file at the confLoc and returns the Config instance.

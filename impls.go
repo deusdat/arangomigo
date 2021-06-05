@@ -1,7 +1,9 @@
-package main
+package arangomigo
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 
 	"github.com/pkg/errors"
@@ -45,13 +47,20 @@ func (op *Operation) SetCheckSum(sum string) {
 
 // End Common operation implementations
 
-// Entry point in actually executing the migrations
-func perform(ctx context.Context, c Config) error {
-	pm, err := migrations(c.MigrationsPath)
-	if e(err) {
-		return err
+func PerformMigrations(ctx context.Context, c Config, ms []Migration) error {
+	var pms []PairedMigrations
+	for i, migration := range ms {
+		name := fmt.Sprintf("%d.migration", i)
+		migration.SetFileName(name)
+		chk := md5.Sum([]byte(name))
+		migration.SetCheckSum(hex.EncodeToString(chk[:]))
+		pms = append(pms, PairedMigrations{change: migration, undo: nil})
 	}
+	return perform(ctx, c, pms)
+}
 
+// Entry point in actually executing the migrations
+func perform(ctx context.Context, c Config, pm []PairedMigrations) error {
 	cl, err := client(ctx, c)
 	db, err := loadDb(ctx, c, cl, &pm, c.Extras)
 	if e(err) {
