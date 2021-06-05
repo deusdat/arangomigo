@@ -30,7 +30,7 @@ func TestHashRejectDelete(t *testing.T) {
 	hi.Action = DELETE
 
 	//assert.Panics(t, func() {
-	err := hi.migrate(
+	err := hi.Migrate(
 		context.Background(),
 		MockDB{},
 		nil,
@@ -44,7 +44,7 @@ func TestFullTextRejectDelete(t *testing.T) {
 	hi.Action = DELETE
 
 	//assert.Panics(t, func() {
-	err := hi.migrate(
+	err := hi.Migrate(
 		context.Background(),
 		MockDB{},
 		nil,
@@ -58,7 +58,7 @@ func TestGeoRejectDelete(t *testing.T) {
 	hi.Action = DELETE
 
 	//assert.Panics(t, func() {
-	err := hi.migrate(
+	err := hi.Migrate(
 		context.Background(),
 		MockDB{},
 		nil,
@@ -72,7 +72,7 @@ func TestPersistentRejectDelete(t *testing.T) {
 	hi.Action = DELETE
 
 	//assert.Panics(t, func() {
-	err := hi.migrate(
+	err := hi.Migrate(
 		context.Background(),
 		MockDB{},
 		nil,
@@ -85,7 +85,7 @@ func TestSkipListRejectDelete(t *testing.T) {
 	hi.Action = DELETE
 
 	//assert.Panics(t, func() {
-	err := hi.migrate(
+	err := hi.Migrate(
 		context.Background(),
 		MockDB{},
 		nil,

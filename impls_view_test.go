@@ -99,7 +99,7 @@ func TestViewCreateError(t *testing.T) {
 	view.Action = CREATE
 	view.Name = "TestView"
 
-	err := view.migrate(
+	err := view.Migrate(
 		context.Background(),
 		MockDB{},
 		nil)
@@ -113,7 +113,7 @@ func TestViewDeleteErrorGetting(t *testing.T) {
 	view.Action = DELETE
 	view.Name = "ViewError"
 
-	err := view.migrate(
+	err := view.Migrate(
 		context.Background(),
 		MockDB{},
 		nil)
@@ -127,7 +127,7 @@ func TestViewDeleteErrorRemove(t *testing.T) {
 	view.Action = DELETE
 	view.Name = "TestView"
 
-	err := view.migrate(
+	err := view.Migrate(
 		context.Background(),
 		MockDB{},
 		nil)
@@ -141,7 +141,7 @@ func TestViewModifyErrorGetting(t *testing.T) {
 	view.Action = MODIFY
 	view.Name = "ViewError"
 
-	err := view.migrate(
+	err := view.Migrate(
 		context.Background(),
 		MockDB{},
 		nil)
@@ -155,7 +155,7 @@ func TestViewModifyErrorGetSearchView(t *testing.T) {
 	view.Action = MODIFY
 	view.Name = "GetSearchViewError"
 
-	err := view.migrate(
+	err := view.Migrate(
 		context.Background(),
 		MockDB{},
 		nil)
@@ -169,7 +169,7 @@ func TestViewModifyErrorSetProperties(t *testing.T) {
 	view.Action = MODIFY
 	view.Name = "TestView"
 
-	err := view.migrate(
+	err := view.Migrate(
 		context.Background(),
 		MockDB{},
 		nil)

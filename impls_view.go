@@ -10,7 +10,7 @@ import (
 
 // The impls_view contains all the implementation code for create, modifying and deleting an Arango
 // Search View.
-func (searchView SearchView) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (searchView SearchView) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	switch searchView.Action {
 	case CREATE:
 		viewProperties := buildViewProperties(searchView)
