@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+
 	"github.com/pkg/errors"
 
 	driver "github.com/arangodb/go-driver"
@@ -424,10 +425,16 @@ func (i FullTextIndex) migrate(ctx context.Context, db driver.Database, extras m
 	}
 	switch i.Action {
 	case DELETE:
-		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+		err = dropIndex(ctx, cl, i.Name)
+		return errors.Wrapf(
+			err,
+			"Could not drop full text index with name '%s' in collection %s",
+			i.Name, i.Collection,
+		)
 	case CREATE:
 		options := driver.EnsureFullTextIndexOptions{}
 		options.MinLength = i.MinLength
+		options.Name = i.Name
 		_, _, err = cl.EnsureFullTextIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -451,10 +458,16 @@ func (i GeoIndex) migrate(ctx context.Context, db driver.Database, extras map[st
 	}
 	switch i.Action {
 	case DELETE:
-		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+		err = dropIndex(ctx, cl, i.Name)
+		return errors.Wrapf(
+			err,
+			"Could not drop geo index with name '%s' in collection %s",
+			i.Name, i.Collection,
+		)
 	case CREATE:
 		options := driver.EnsureGeoIndexOptions{}
 		options.GeoJSON = i.GeoJSON
+		options.Name = i.Name
 		_, _, err = cl.EnsureGeoIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -470,6 +483,7 @@ func (i GeoIndex) migrate(ctx context.Context, db driver.Database, extras map[st
 
 func (i HashIndex) migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
+
 	if e(err) {
 		return errors.Wrapf(
 			err,
@@ -479,12 +493,18 @@ func (i HashIndex) migrate(ctx context.Context, db driver.Database, extras map[s
 	}
 	switch i.Action {
 	case DELETE:
-		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+		err = dropIndex(ctx, cl, i.Name)
+		return errors.Wrapf(
+			err,
+			"Could not drop hash index with name '%s' in collection %s",
+			i.Name, i.Collection,
+		)
 	case CREATE:
 		options := driver.EnsureHashIndexOptions{}
 		options.NoDeduplicate = i.NoDeduplicate
 		options.Sparse = i.Sparse
 		options.Unique = i.Unique
+		options.Name = i.Name
 		_, _, err = cl.EnsureHashIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -508,11 +528,17 @@ func (i PersistentIndex) migrate(ctx context.Context, db driver.Database, extras
 	}
 	switch i.Action {
 	case DELETE:
-		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+		err = dropIndex(ctx, cl, i.Name)
+		return errors.Wrapf(
+			err,
+			"Could not drop persistent index with name '%s' in collection %s",
+			i.Name, i.Collection,
+		)
 	case CREATE:
 		options := driver.EnsurePersistentIndexOptions{}
 		options.Sparse = i.Sparse
 		options.Unique = i.Unique
+		options.Name = i.Name
 		_, _, err = cl.EnsurePersistentIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -536,12 +562,18 @@ func (i SkiplistIndex) migrate(ctx context.Context, db driver.Database, extras m
 	}
 	switch i.Action {
 	case DELETE:
-		return errors.Errorf("Due to Arango API limitations, you cannot delete an index")
+		err = dropIndex(ctx, cl, i.Name)
+		return errors.Wrapf(
+			err,
+			"Could not drop skiplist index with name '%s' in collection %s",
+			i.Name, i.Collection,
+		)
 	case CREATE:
 		options := driver.EnsureSkipListIndexOptions{}
 		options.Sparse = i.Sparse
 		options.Unique = i.Unique
 		options.NoDeduplicate = i.NoDeduplicate
+		options.Name = i.Name
 		_, _, err = cl.EnsureSkipListIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -570,5 +602,32 @@ func (a AQL) migrate(ctx context.Context, db driver.Database, extras map[string]
 		return errors.Wrapf(err, "Couldn't execute query '%s'", a.Query)
 	}
 	defer cur.Close()
+	return nil
+}
+
+func dropIndex(ctx context.Context, cl driver.Collection, name string) error {
+	var exists bool
+	var idx driver.Index
+	var err error
+
+	exists, err = cl.IndexExists(ctx, name)
+	if e(err) {
+		return errors.Wrapf(err, "Error finding index '%s'", name)
+	}
+
+	if exists {
+		// get index
+		idx, err = cl.Index(ctx, name)
+		if e(err) {
+			return errors.Wrapf(err, "Error retrieving index '%s'", name)
+		}
+
+		// drop index
+		err = idx.Remove(ctx)
+		if e(err) {
+			return errors.Wrapf(err, "Error dropping index '%s'", name)
+		}
+	}
+
 	return nil
 }
