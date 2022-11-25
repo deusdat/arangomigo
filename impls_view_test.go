@@ -27,7 +27,7 @@ func (mv MockView) ArangoSearchView() (driver.ArangoSearchView, error) {
 
 	}
 	return MockArangoSearchView{
-		name:mv.Name(),
+		name: mv.Name(),
 	}, nil
 }
 
@@ -61,8 +61,18 @@ func (mv MockArangoSearchView) ArangoSearchView() (driver.ArangoSearchView, erro
 	return nil, nil
 }
 
+// An empty implementation of ArangoSearchView.View.ArangoSearchViewAlias().
+func (mv MockArangoSearchView) ArangoSearchViewAlias() (driver.ArangoSearchViewAlias, error) {
+	return nil, nil
+}
+
 // An empty implementation of ArangoSearchView.View.Database().
 func (mv MockArangoSearchView) Database() driver.Database {
+	return nil
+}
+
+// An empty implementation of ArangoSearchView.View.Rename().
+func (mv MockArangoSearchView) Rename(ctx context.Context, newName string) error {
 	return nil
 }
 
