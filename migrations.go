@@ -45,6 +45,7 @@ var fulltextidx = regexp.MustCompile(`^type:\sfulltextindex`)
 var geoidx = regexp.MustCompile(`^type:\sgeoindex`)
 var hashidx = regexp.MustCompile(`^type:\shashindex`)
 var persistentidx = regexp.MustCompile(`^type:\spersistentindex`)
+var ttlidx = regexp.MustCompile(`^type:\sttlindex`)
 var skipidx = regexp.MustCompile(`^type:\sskiplistindex`)
 var view = regexp.MustCompile(`^type:\sview`)
 
@@ -112,6 +113,14 @@ type PersistentIndex struct {
 	Collection string
 	Unique     bool
 	Sparse     bool
+}
+
+// TTLIndex creates a TTL index on the collections' fields.
+type TTLIndex struct {
+	Operation   `yaml:",inline"`
+	Field       string
+	Collection  string
+	ExpireAfter int
 }
 
 // SkiplistIndex creates a sliplist index on the collections' fields.
@@ -194,8 +203,9 @@ type SearchView struct {
 // ConsolidationPolicy holds threshold values specifying when to
 // consolidate view data.
 // see ArangoSearchConsolidationPolicy
-//     ArangoSearchConsolidationPolicyTier
-//     ArangoSearchConsolidationPolicyBytesAccum
+//
+//	ArangoSearchConsolidationPolicyTier
+//	ArangoSearchConsolidationPolicyBytesAccum
 type ConsolidationPolicy struct {
 	// Type returns the type of the ConsolidationPolicy.
 	Type string
@@ -374,6 +384,8 @@ func pickT(contents []byte) (Migration, error) {
 		return new(HashIndex), nil
 	case persistentidx.MatchString(s):
 		return new(PersistentIndex), nil
+	case ttlidx.MatchString(s):
+		return new(TTLIndex), nil
 	case skipidx.MatchString(s):
 		return new(SkiplistIndex), nil
 	case view.MatchString(s):
@@ -384,8 +396,8 @@ func pickT(contents []byte) (Migration, error) {
 }
 
 /*
-	Converts a path to the proper underlying types specified in
-	the childPath.
+Converts a path to the proper underlying types specified in
+the childPath.
 */
 func toStruct(childPath string) (Migration, error) {
 	contents, checksum, err := open(childPath)
