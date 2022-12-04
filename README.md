@@ -245,6 +245,15 @@ unique: true
 sparse: true
 ```
 
+**TTL Index**
+```yaml
+type: ttlindex
+action: create
+field: createdAt
+collection: recipes
+expireafter: 3600
+```
+
 **Skiplist Index**
 ```yaml 
 type: skiplistindex

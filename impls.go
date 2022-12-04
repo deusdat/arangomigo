@@ -560,6 +560,38 @@ func (i PersistentIndex) Migrate(ctx context.Context, db driver.Database, extras
 	}
 }
 
+func (i TTLIndex) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+	cl, err := db.Collection(ctx, i.Collection)
+	if e(err) {
+		return errors.Wrapf(
+			err,
+			"Couldn't create ttl index on collection '%s'. Collection not found",
+			i.Collection,
+		)
+	}
+	switch i.Action {
+	case DELETE:
+		err = dropIndex(ctx, cl, i.Name)
+		return errors.Wrapf(
+			err,
+			"Could not drop ttl index with name '%s' in collection %s",
+			i.Name, i.Collection,
+		)
+	case CREATE:
+		options := driver.EnsureTTLIndexOptions{}
+		options.Name = i.Name
+		_, _, err = cl.EnsureTTLIndex(ctx, i.Field, i.ExpireAfter, &options)
+
+		return errors.Wrapf(
+			err,
+			"Could not create ttl index with field '%s' in collection %s",
+			i.Field, i.Collection,
+		)
+	default:
+		return errors.Errorf("Unknown action %s", i.Action)
+	}
+}
+
 func (i SkiplistIndex) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {

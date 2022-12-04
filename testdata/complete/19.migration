@@ -1,0 +1,5 @@
+type: ttlindex
+action: create
+field: a
+collection: recipes
+expireafter: 3600

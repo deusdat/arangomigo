@@ -69,9 +69,9 @@ func TestFullMigration(t *testing.T) {
 	assert.Equal(t, "Taco Fishy", r.Name)
 
 	// Can't really tell which indexes are available, just that recipes should have
-	// 6: 1 for the PK and 5 others.
+	// 7: 1 for the PK and 5 others.
 	idxs, err := recipes.Indexes(ctx)
-	assert.Equal(t, 6, len(idxs), "Recipes should have 6 indexes")
+	assert.Equal(t, 7, len(idxs), "Recipes should have 7 indexes")
 
 	// Make sure wait for sync sticks.
 	colprop, err := recipes.Properties(ctx)
@@ -131,8 +131,8 @@ func TestMultiPathMigration(t *testing.T) {
 
 	// Should find the custom recipe inserted by AQL.
 
-	// Can't really tell which indexes are available, just that recipes should have
-	// 6: 1 for the PK and 5 others.
+	// Can't really tell which indexes are available, just that recipes should
+	// have just 1 for the PK.
 	idxs, err := recipes.Indexes(ctx)
 	assert.Equal(t, 1, len(idxs), "Recipes should have 1 index")
 
