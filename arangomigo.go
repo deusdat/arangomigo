@@ -41,7 +41,7 @@ func migrate(c Config) error {
 func loadConf(confLoc string) (*Config, error) {
 	bytes, _, err := open(confLoc)
 	if e(err) {
-		return nil, fmt.Errorf("Couldn't locate configation at path '%s'", confLoc)
+		return nil, fmt.Errorf("couldn't locate configation at path '%s'", confLoc)
 	}
 
 	conf := Config{}
