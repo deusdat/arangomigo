@@ -10,7 +10,9 @@ sharding collections on distributed systems. This means that we can't rely on cr
 ### Supports Arango 3.1+.
 
 ## Getting an executable
-If you're familiar with Go, you can clone and build this project directly on your target machine. If you'd prefer an official build, look in the releases of the project.
+If you're familiar with Go, you can clone and build this project directly on 
+your target machine. If you'd prefer an official build, look in the builds 
+folder.
 
 To your executable pass the path to the configuration file, which is defined below. 
 
@@ -31,8 +33,8 @@ extras:
    patricksPassword: Extrem!Password&^%$#,
    shouldBeANumber: 10,
    secret: Lots of mayo}
-
 ```
+
 ArangoMiGO supports fail over out of the box: `endpoints`. If you are creating a database as part of the
 migration set, make sure that the username has the proper rights. 
 
@@ -326,3 +328,4 @@ name: SearchRecipes
 
 Instead of using the binary amd yaml files you can also embed the migrations directly from your go code. See 
 [perform_test.go](perform_test.go) for an example. 
+
