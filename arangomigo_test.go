@@ -31,7 +31,7 @@ func TestFullMigration(t *testing.T) {
 
 	ctx := context.Background()
 
-	cl, err := client(ctx, *conf)
+	cl, err := client(*conf)
 	if e(err) {
 		log.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestFullMigration(t *testing.T) {
 	}
 
 	_, err = cl.Database(ctx, conf.Db)
-	if !driver.IsNotFound(err) {
+	if !driver.IsNotFoundGeneral(err) {
 		t.Fatal("Could not connect to the Database", err)
 	}
 
@@ -102,7 +102,7 @@ func TestMultiPathMigration(t *testing.T) {
 
 	ctx := context.Background()
 
-	cl, err := client(ctx, *conf)
+	cl, err := client(*conf)
 	if e(err) {
 		log.Fatal(err)
 	}

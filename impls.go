@@ -8,7 +8,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	driver "github.com/arangodb/go-driver"
+	"github.com/arangodb/go-driver"
 	"github.com/arangodb/go-driver/http"
 )
 
@@ -61,7 +61,7 @@ func PerformMigrations(ctx context.Context, c Config, ms []Migration) error {
 
 // Entry point in actually executing the migrations
 func perform(ctx context.Context, c Config, pm []PairedMigrations) error {
-	cl, err := client(ctx, c)
+	cl, err := client(c)
 	db, err := loadDb(ctx, c, cl, &pm, c.Extras)
 	if e(err) {
 		return err
@@ -122,6 +122,10 @@ func migrateNow(
 	return nil
 }
 
+func pointyBool(bool2 bool) *bool {
+	return &bool2
+}
+
 func loadDb(
 	ctx context.Context,
 	conf Config,
@@ -131,7 +135,7 @@ func loadDb(
 	// Checks to see if the database exists
 	dbName := conf.Db
 	db, err := cl.Database(ctx, dbName)
-	if err != nil && driver.IsNotFound(err) {
+	if err != nil && driver.IsNotFoundGeneral(err) {
 		// Creating a database requires extra setup.
 		m := (*pm)[0].change
 		o, ok := m.(*Database)
@@ -158,12 +162,15 @@ func loadDb(
 	if err == nil {
 		// Check to see if the migration coll is there.
 		_, err := db.Collection(ctx, migCol)
-		if driver.IsNotFound(err) {
+		if driver.IsNotFoundGeneral(err) {
 			ko := driver.CollectionKeyOptions{}
-			ko.AllowUserKeys = true
+			ko.AllowUserKeysPtr = pointyBool(true)
 			options := driver.CreateCollectionOptions{}
 			options.KeyOptions = &ko
-			db.CreateCollection(ctx, migCol, &options)
+			if _, err := db.CreateCollection(ctx, migCol, &options); err != nil {
+				fmt.Printf("Failed to create collection %s", migCol)
+				return db, err
+			}
 		}
 	}
 
@@ -171,7 +178,7 @@ func loadDb(
 }
 
 // Create the client used to talk to ArangoDB
-func client(ctx context.Context, c Config) (driver.Client, error) {
+func client(c Config) (driver.Client, error) {
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: c.Endpoints,
 	})
@@ -237,7 +244,7 @@ func directReplace(key string, extras map[string]interface{}) interface{} {
 	return key
 }
 
-func (cl Collection) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (cl Collection) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
 	switch cl.Action {
 	case CREATE:
 		options := driver.CreateCollectionOptions{}
@@ -265,7 +272,7 @@ func (cl Collection) Migrate(ctx context.Context, db driver.Database, extras map
 		// Configures the user keys
 		ko := driver.CollectionKeyOptions{}
 		if cl.AllowUserKeys != nil {
-			ko.AllowUserKeys = *cl.AllowUserKeys
+			ko.AllowUserKeysPtr = cl.AllowUserKeys
 		}
 		options.KeyOptions = &ko
 
@@ -303,7 +310,7 @@ func (cl Collection) Migrate(ctx context.Context, db driver.Database, extras map
 	return nil
 }
 
-func (g Graph) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (g Graph) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
 	switch g.Action {
 	case CREATE:
 		options := driver.CreateGraphOptions{}
@@ -335,7 +342,7 @@ func (g Graph) Migrate(ctx context.Context, db driver.Database, extras map[strin
 		// Map the Orphan Vertices
 		options.OrphanVertexCollections = g.OrphanVertices
 
-		_, err := db.CreateGraph(ctx, g.Name, &options)
+		_, err := db.CreateGraphV2(ctx, g.Name, &options)
 		return err
 	case DELETE:
 		aG, err := db.Graph(ctx, g.Name)
@@ -358,7 +365,7 @@ func (g Graph) Migrate(ctx context.Context, db driver.Database, extras map[strin
 		if len(g.RemoveEdges) > 0 {
 			for _, re := range g.RemoveEdges {
 				ec, _, err := aG.EdgeCollection(ctx, re)
-				if driver.IsNotFound(err) {
+				if driver.IsNotFoundGeneral(err) {
 					fmt.Printf("Couldn't find edge collection '%s' to remove.\n", re)
 					continue
 				}
@@ -372,7 +379,7 @@ func (g Graph) Migrate(ctx context.Context, db driver.Database, extras map[strin
 		if len(g.RemoveVertices) > 0 {
 			for _, v := range g.RemoveVertices {
 				vc, err := aG.VertexCollection(ctx, v)
-				if driver.IsNotFound(err) {
+				if driver.IsNotFoundGeneral(err) {
 					fmt.Printf("Couldn't find vertex '%s' to remove.", v)
 				}
 				if err = vc.Remove(ctx); e(err) {
@@ -423,7 +430,7 @@ func (g Graph) Migrate(ctx context.Context, db driver.Database, extras map[strin
 	}
 }
 
-func (i FullTextIndex) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (i FullTextIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -456,7 +463,7 @@ func (i FullTextIndex) Migrate(ctx context.Context, db driver.Database, extras m
 	}
 }
 
-func (i GeoIndex) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (i GeoIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -490,7 +497,7 @@ func (i GeoIndex) Migrate(ctx context.Context, db driver.Database, extras map[st
 	}
 }
 
-func (i HashIndex) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (i HashIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 
 	if e(err) {
@@ -526,7 +533,7 @@ func (i HashIndex) Migrate(ctx context.Context, db driver.Database, extras map[s
 	}
 }
 
-func (i PersistentIndex) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (i PersistentIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -560,7 +567,7 @@ func (i PersistentIndex) Migrate(ctx context.Context, db driver.Database, extras
 	}
 }
 
-func (i TTLIndex) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (i TTLIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -592,7 +599,7 @@ func (i TTLIndex) Migrate(ctx context.Context, db driver.Database, extras map[st
 	}
 }
 
-func (i SkiplistIndex) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+func (i SkiplistIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
 	cl, err := db.Collection(ctx, i.Collection)
 	if e(err) {
 		return errors.Wrapf(
@@ -642,7 +649,12 @@ func (a AQL) Migrate(ctx context.Context, db driver.Database, extras map[string]
 	if e(err) {
 		return errors.Wrapf(err, "Couldn't execute query '%s'", a.Query)
 	}
-	defer cur.Close()
+	defer func(cur driver.Cursor) {
+		err := cur.Close()
+		if err != nil {
+			fmt.Printf("could not close cursor")
+		}
+	}(cur)
 	return nil
 }
 

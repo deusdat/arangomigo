@@ -7,7 +7,7 @@ import (
 
 func TestPerform(t *testing.T) {
 	config := Config{
-		Endpoints: []string{"http://localhost:1234"},
+		Endpoints: []string{"http://0.0.0.0:8529"},
 		Username:  "root",
 		Password:  "simple",
 		Db:        "MigoFullPerform",
