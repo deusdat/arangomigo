@@ -451,6 +451,7 @@ func (i FullTextIndex) Migrate(ctx context.Context, db driver.Database, _ map[st
 		options := driver.EnsureFullTextIndexOptions{}
 		options.MinLength = i.MinLength
 		options.Name = i.Name
+		options.InBackground = i.InBackground
 		_, _, err = cl.EnsureFullTextIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -484,6 +485,7 @@ func (i GeoIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]
 		options := driver.EnsureGeoIndexOptions{}
 		options.GeoJSON = i.GeoJSON
 		options.Name = i.Name
+		options.InBackground = i.InBackground
 		_, _, err = cl.EnsureGeoIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -521,6 +523,7 @@ func (i HashIndex) Migrate(ctx context.Context, db driver.Database, _ map[string
 		options.Sparse = i.Sparse
 		options.Unique = i.Unique
 		options.Name = i.Name
+		options.InBackground = i.InBackground
 		_, _, err = cl.EnsureHashIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -555,6 +558,7 @@ func (i PersistentIndex) Migrate(ctx context.Context, db driver.Database, _ map[
 		options.Sparse = i.Sparse
 		options.Unique = i.Unique
 		options.Name = i.Name
+		options.InBackground = i.InBackground
 		_, _, err = cl.EnsurePersistentIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
@@ -587,6 +591,7 @@ func (i TTLIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]
 	case CREATE:
 		options := driver.EnsureTTLIndexOptions{}
 		options.Name = i.Name
+		options.InBackground = i.InBackground
 		_, _, err = cl.EnsureTTLIndex(ctx, i.Field, i.ExpireAfter, &options)
 
 		return errors.Wrapf(
@@ -622,6 +627,7 @@ func (i SkiplistIndex) Migrate(ctx context.Context, db driver.Database, _ map[st
 		options.Unique = i.Unique
 		options.NoDeduplicate = i.NoDeduplicate
 		options.Name = i.Name
+		options.InBackground = i.InBackground
 		_, _, err = cl.EnsureSkipListIndex(ctx, i.Fields, &options)
 
 		return errors.Wrapf(
