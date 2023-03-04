@@ -69,7 +69,7 @@ func TestFullMigration(t *testing.T) {
 	assert.Equal(t, "Taco Fishy", r.Name)
 
 	// Can't really tell which indexes are available, just that recipes should have
-	// 7: 1 for the PK and 5 others.
+	// 7: 1 for the PK and 6 others.
 	idxs, err := recipes.Indexes(ctx)
 	assert.Equal(t, 7, len(idxs), "Recipes should have 7 indexes")
 
