@@ -200,6 +200,7 @@ fields:
     - name
 collection: recipes
 minlength: 4
+inbackground: false
 ```
 You can add a full text index by specifying the minlength and fields.
 
@@ -211,6 +212,7 @@ collection: recipes
 fields:
     - pts
 geojson: true
+inbackground: false
 ```
 geojson indicate that field or fields are an array in the form [lat, long]. To excerpt the Arango Documentation
 
@@ -234,6 +236,7 @@ fields:
     - two
 sparse: true
 nodeduplicate: false
+inbackground: false
 ```
 
 **Persistent Index**
@@ -245,6 +248,7 @@ fields:
 collection: recipes
 unique: true
 sparse: true
+inbackground: false
 ```
 
 **TTL Index**
@@ -254,6 +258,7 @@ action: create
 field: createdAt
 collection: recipes
 expireafter: 3600
+inbackground: false
 ```
 
 **Skiplist Index**
@@ -267,6 +272,7 @@ collection: recipes
 unique: true
 sparse: true
 nodeduplicate: true
+inbackground: false
 ```
 
 ### Views
