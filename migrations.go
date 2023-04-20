@@ -82,18 +82,20 @@ type Collection struct {
 
 // FullTextIndex defines how to build a full text index on a field
 type FullTextIndex struct {
-	Operation  `yaml:",inline"`
-	Fields     []string
-	Collection string
-	MinLength  int
+	Operation    `yaml:",inline"`
+	Fields       []string
+	Collection   string
+	MinLength    int
+	InBackground bool
 }
 
 // GeoIndex creates a GeoIndex within the specified collection.
 type GeoIndex struct {
-	Operation  `yaml:",inline"`
-	Fields     []string
-	Collection string
-	GeoJSON    bool
+	Operation    `yaml:",inline"`
+	Fields       []string
+	Collection   string
+	GeoJSON      bool
+	InBackground bool
 }
 
 // HashIndex creates a hash index on the fields within the specified Collection.
@@ -104,23 +106,26 @@ type HashIndex struct {
 	Unique        bool
 	Sparse        bool
 	NoDeduplicate bool
+	InBackground  bool
 }
 
 // PersistentIndex creates a persistent index on the collections' fields.
 type PersistentIndex struct {
-	Operation  `yaml:",inline"`
-	Fields     []string
-	Collection string
-	Unique     bool
-	Sparse     bool
+	Operation    `yaml:",inline"`
+	Fields       []string
+	Collection   string
+	Unique       bool
+	Sparse       bool
+	InBackground bool
 }
 
 // TTLIndex creates a TTL index on the collections' fields.
 type TTLIndex struct {
-	Operation   `yaml:",inline"`
-	Field       string
-	Collection  string
-	ExpireAfter int
+	Operation    `yaml:",inline"`
+	Field        string
+	Collection   string
+	ExpireAfter  int
+	InBackground bool
 }
 
 // SkiplistIndex creates a sliplist index on the collections' fields.
@@ -131,6 +136,7 @@ type SkiplistIndex struct {
 	Unique        bool
 	Sparse        bool
 	NoDeduplicate bool
+	InBackground  bool
 }
 
 // AQL allows arbitrary AQL execution as part of the migration.
