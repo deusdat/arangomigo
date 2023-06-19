@@ -3,6 +3,7 @@ package arangomigo
 import (
 	"context"
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/hex"
 	"fmt"
 
@@ -181,6 +182,9 @@ func loadDb(
 func client(c Config) (driver.Client, error) {
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: c.Endpoints,
+		TLSConfig: &tls.Config{
+			InsecureSkipVerify: c.SkipSslVerify,
+		},
 	})
 
 	if e(err) {

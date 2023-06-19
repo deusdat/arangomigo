@@ -2,12 +2,22 @@ package arangomigo
 
 import (
 	"context"
+	"os"
 	"testing"
 )
 
+func GetEnv(key string, fallback string) string {
+	value, exists := os.LookupEnv(key)
+	if exists {
+		return value
+	}
+	return fallback
+}
+
 func TestPerform(t *testing.T) {
+	arangoUrl := GetEnv("ARANGO_URL", "http://0.0.0.0:8529")
 	config := Config{
-		Endpoints: []string{"http://0.0.0.0:8529"},
+		Endpoints: []string{arangoUrl},
 		Username:  "root",
 		Password:  "simple",
 		Db:        "MigoFullPerform",

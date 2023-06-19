@@ -6,9 +6,10 @@ package arangomigo
 import (
 	"context"
 	"fmt"
+	"log"
+
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
-	"log"
 )
 
 func TriggerMigration(configAt string) {
@@ -86,6 +87,7 @@ type Config struct {
 	Password       string
 	MigrationsPath StringArray
 	Db             string
+	SkipSslVerify  bool `yaml:"skip_ssl_verify"`
 	// Extras allows the user to pass in replaced variables
 	Extras map[string]interface{}
 }

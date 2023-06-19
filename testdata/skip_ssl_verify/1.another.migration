@@ -1,0 +1,6 @@
+type: database
+action: create
+name: MigoFull2
+allowed:
+  - username: ${patricksUser}
+    password: ${patricksPassword}
