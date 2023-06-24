@@ -335,3 +335,9 @@ name: SearchRecipes
 Instead of using the binary amd yaml files you can also embed the migrations directly from your go code. See 
 [perform_test.go](perform_test.go) for an example. 
 
+
+## Run tests
+
+To run tests inside Docker run:
+
+`./test.sh`

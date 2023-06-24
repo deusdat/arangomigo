@@ -9,7 +9,7 @@ services:
     - --
     - wait-for-it
     - -s
-    - --timeout=60
+    - --timeout=120
     - "arangodb_ssl:9258"
     - --
     - go
@@ -24,6 +24,7 @@ services:
       ARANGO_ROOT_PASSWORD: simple
   arangodb_ssl:
     build:
+      context: .
       dockerfile: Dockerfile.arangossl
     environment:
       ARANGO_ROOT_PASSWORD: simple
