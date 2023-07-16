@@ -1,8 +1,30 @@
 version: '3.7'
 services:
+  test:
+    build: .
+    command:
+    - wait-for-it
+    - -s
+    - "arangodb_db_container:8529"
+    - --
+    - wait-for-it
+    - -s
+    - --timeout=120
+    - "arangodb_ssl:9258"
+    - --
+    - go
+    - test
+    environment:
+    - ARANGO_URL=http://arangodb_db_container:8529
+    depends_on:
+    - arangodb_db_container
   arangodb_db_container:
     image: arangodb:latest
     environment:
       ARANGO_ROOT_PASSWORD: simple
-    ports:
-      - "8529:8529"
+  arangodb_ssl:
+    build:
+      context: .
+      dockerfile: Dockerfile.arangossl
+    environment:
+      ARANGO_ROOT_PASSWORD: simple

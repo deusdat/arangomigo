@@ -1,6 +1,6 @@
 # Test configuration to make sure the system can create a complex db
 endpoints:
-   - http://0.0.0.0:8529
+   - http://arangodb_db_container:8529
 username: root
 password: simple
 migrationspath:

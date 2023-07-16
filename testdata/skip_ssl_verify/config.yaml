@@ -1,0 +1,9 @@
+# Test configuration to make sure the system can create a complex db
+endpoints:
+   - https://arangodb_ssl:9258
+skip_ssl_verify: true
+username: root
+password: simple
+migrationspath:
+   - testdata/skip_ssl_verify
+db: MigoFull2

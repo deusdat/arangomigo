@@ -142,6 +142,41 @@ func TestMultiPathMigration(t *testing.T) {
 	assert.False(t, colprop.WaitForSync, "Should wait for sync.")
 }
 
+func TestSkipSSLVerify(t *testing.T) {
+	configFile := "testdata/skip_ssl_verify/config.yaml"
+
+	conf, err := loadConf(configFile)
+	if e(err) {
+		log.Fatal(err)
+	}
+
+	ctx := context.Background()
+
+	cl, err := client(*conf)
+	if e(err) {
+		log.Fatal(err)
+	}
+
+	db, err := cl.Database(ctx, conf.Db)
+	if err == nil {
+		err := db.Remove(ctx)
+		if e(err) {
+			t.Fatal("Couldn't prepare for test")
+		}
+	}
+
+	_, err = cl.Database(ctx, conf.Db)
+	if !driver.IsNotFound(err) {
+		t.Fatal("Could not connect to the Database", err)
+	}
+
+	TriggerMigration(configFile)
+
+	// Look to see if everything was made properly.
+	db, err = cl.Database(ctx, conf.Db)
+	assert.NoError(t, err, "Unable to find the database")
+}
+
 type recipe struct {
 	Name        string
 	WithEscaped string

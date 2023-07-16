@@ -1,0 +1,12 @@
+FROM arangodb:latest
+
+RUN apk add openssl
+
+RUN openssl req -new -newkey rsa:4096 -nodes -subj "/C=US/ST=Denial/L=Springfield/O=Dis/CN=www.example.com" -keyout snakeoil.key -out snakeoil.csr
+RUN openssl x509 -req -sha256 -days 365 -in snakeoil.csr -signkey snakeoil.key -out snakeoil.pem
+RUN cat snakeoil.key snakeoil.pem > /etc/arangodb3/combined_snakeoil.pem
+
+RUN sed -i 's@endpoint = tcp://0.0.0.0:8529@endpoint = ssl://0.0.0.0:9258@' /etc/arangodb3/arangod.conf && \
+    echo "[ssl]" >> /etc/arangodb3/arangod.conf && \
+    echo "keyfile = /etc/arangodb3/combined_snakeoil.pem" >> /etc/arangodb3/arangod.conf
+
