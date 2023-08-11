@@ -27,7 +27,7 @@ type Migration interface {
 	SetCheckSum(sum string)
 }
 
-// FileName gets the filename of the migrations configuration.
+// FileName gets the filename of the Migrations configuration.
 func (op *Operation) FileName() string {
 	return op.fileName
 }
@@ -58,11 +58,11 @@ func PerformMigrations(ctx context.Context, c Config, ms []Migration) error {
 		migration.SetCheckSum(hex.EncodeToString(chk[:]))
 		pms = append(pms, PairedMigrations{change: migration, undo: nil})
 	}
-	return perform(ctx, c, pms)
+	return Perform(ctx, c, pms)
 }
 
-// Entry point in actually executing the migrations
-func perform(ctx context.Context, c Config, pm []PairedMigrations) error {
+// Perform is the entry point in actually executing the Migrations
+func Perform(ctx context.Context, c Config, pm []PairedMigrations) error {
 	cl, err := client(c)
 	db, err := loadDb(ctx, c, cl, &pm, c.Extras)
 	if e(err) {
@@ -95,7 +95,7 @@ func migrateNow(
 		m := pm.change
 		u := pm.undo
 
-		// Since migrations are stored by their file names, just see if it exists
+		// Since Migrations are stored by their file names, just see if it exists
 		migRan, err := mcol.DocumentExists(ctx, m.FileName())
 		if e(err) {
 			return err

@@ -5,19 +5,19 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 
 	//driver "github.com/arangodb/go-driver" // This pisses me off. Why expose it?
-	driver "github.com/arangodb/go-driver"
+	"github.com/arangodb/go-driver"
 	"gopkg.in/yaml.v2"
 )
 
-// Operation the common elements for all migrations.
+// Operation the common elements for all Migrations.
 type Operation struct {
 	checksum string
 	fileName string
@@ -220,7 +220,7 @@ type ConsolidationPolicy struct {
 	Options map[string]interface{}
 }
 
-// SortField describes a field and whether its ascending or not used for primary search.
+// SortField describes a field and whether it's ascending or not used for primary search.
 type SortField struct {
 	// The name of the field.
 	Field string
@@ -251,9 +251,9 @@ type SearchElementProperties struct {
 
 var validVersion = regexp.MustCompile(`^\d*(\.\d*)*?$`)
 
-// Pairs migrations together.
-// Returns an error if unable to find migrations.
-func migrations(paths []string) ([]PairedMigrations, error) {
+// Migrations pairs migrations together.
+// Returns an error if unable to find Migrations.
+func Migrations(paths []string) ([]PairedMigrations, error) {
 	var pms []PairedMigrations
 	for _, path := range paths {
 		ms, err := loadFrom(path)
@@ -261,7 +261,7 @@ func migrations(paths []string) ([]PairedMigrations, error) {
 			return nil, err
 		}
 		if len(ms) == 0 {
-			return nil, errors.New("Could not find migrations at path '" + path + "'")
+			return nil, errors.New("Could not find Migrations at path '" + path + "'")
 		}
 		for _, m := range ms {
 			pm := PairedMigrations{change: m, undo: nil}
@@ -332,7 +332,7 @@ func nearlyLexical(s []string) func(i, j int) bool {
 	}
 }
 
-// Loads a set of migrations from a given directory.
+// Loads a set of Migrations from a given directory.
 func loadFrom(path string) ([]Migration, error) {
 	parentDir := filepath.Join(path, "*.migration")
 	migrations, err := filepath.Glob(parentDir)
@@ -362,7 +362,7 @@ func loadFrom(path string) ([]Migration, error) {
 // Opens the path into a byte slice.
 // Returns the bytes, the file's checksum, and an error.
 func open(childPath string) ([]byte, string, error) {
-	bytes, err := ioutil.ReadFile(childPath)
+	bytes, err := os.ReadFile(childPath)
 	if err != nil {
 		return nil, "", err
 	}
@@ -398,7 +398,7 @@ func pickT(contents []byte) (Migration, error) {
 	case view.MatchString(s):
 		return new(SearchView), nil
 	default:
-		return nil, errors.New("Can't determine YAML type")
+		return nil, errors.New("can't determine YAML type")
 	}
 }
 
