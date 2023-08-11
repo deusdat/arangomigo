@@ -2,9 +2,9 @@ package arangomigo
 
 import (
 	"context"
-	"fmt"
 	"github.com/arangodb/go-driver"
 	"github.com/pkg/errors"
+	"log"
 	"reflect"
 )
 
@@ -16,7 +16,7 @@ func (searchView SearchView) Migrate(ctx context.Context, db driver.Database, ex
 		viewProperties := buildViewProperties(searchView)
 		_, err := db.CreateArangoSearchView(ctx, searchView.Name, &viewProperties)
 		if !e(err) {
-			fmt.Printf("Created view '%s'\n", searchView.Name)
+			log.Printf("Created view '%s'\n", searchView.Name)
 		}
 		return errors.Wrapf(err, "Couldn't create view '%s'", searchView.Name)
 	case DELETE:
@@ -26,7 +26,7 @@ func (searchView SearchView) Migrate(ctx context.Context, db driver.Database, ex
 		}
 		err = view.Remove(ctx)
 		if !e(err) {
-			fmt.Printf("Deleted view '%s'\n", searchView.Name)
+			log.Printf("Deleted view '%s'\n", searchView.Name)
 		}
 		return errors.Wrapf(err, "Couldn't delete view '%s'", searchView.Name)
 	case MODIFY:
@@ -41,7 +41,7 @@ func (searchView SearchView) Migrate(ctx context.Context, db driver.Database, ex
 		viewProperties := buildViewProperties(searchView)
 		err = aView.SetProperties(ctx, viewProperties)
 		if !e(err) {
-			fmt.Printf("Updated view '%s'\n", searchView.Name)
+			log.Printf("Updated view '%s'\n", searchView.Name)
 		}
 		return errors.Wrapf(err, "Couldn't update SearchView '%s'", searchView.Name)
 	}
@@ -83,7 +83,7 @@ func buildViewProperties(searchView SearchView) driver.ArangoSearchViewPropertie
 }
 
 func buildSortField(field SortField) driver.ArangoSearchPrimarySortEntry {
-	sortEntry := driver.ArangoSearchPrimarySortEntry{Field:field.Field}
+	sortEntry := driver.ArangoSearchPrimarySortEntry{Field: field.Field}
 	if field.Ascending != nil {
 		direction := driver.ArangoSearchSortDirectionDesc
 		if *field.Ascending {
@@ -169,7 +169,7 @@ func getFloat(unk interface{}) float64 {
 	fv := v.Convert(floatType)
 	return fv.Float()
 }
-func getInt(unk interface{}) int64  {
+func getInt(unk interface{}) int64 {
 	v := reflect.ValueOf(unk)
 	v = reflect.Indirect(v)
 	fv := v.Convert(intType)

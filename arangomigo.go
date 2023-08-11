@@ -21,7 +21,7 @@ func TriggerMigration(configAt string) {
 	if err := migrate(*config); err != nil {
 		log.Fatal("Could not perform migration\n", err)
 	}
-	fmt.Println("Successfully completed migration")
+	log.Println("Successfully completed migration")
 }
 
 // TODO remember that having replayable migrations need to be possible too.

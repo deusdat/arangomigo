@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -346,12 +347,12 @@ func loadFrom(path string) ([]Migration, error) {
 
 	var answer []Migration
 	for _, migration := range migrations {
-		fmt.Printf("file name: %s\n", migration)
+		log.Printf("file name: %s\n", migration)
 		as, err := toStruct(migration)
 		if err != nil {
 			return answer, err
 		}
-		fmt.Printf("The migration is %+v\n", as)
+		log.Printf("The migration is %+v\n", as)
 		answer = append(answer, as)
 	}
 
