@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
+	"log"
 
 	"github.com/pkg/errors"
 
@@ -83,7 +84,7 @@ func migrateNow(
 	pms []PairedMigrations,
 	extras map[string]interface{},
 ) error {
-	fmt.Println("Starting migration now")
+	log.Println("Starting migration now")
 
 	mcol, err := db.Collection(ctx, migCol)
 	if e(err) {
@@ -150,7 +151,7 @@ func loadDb(
 		err = m.Migrate(ctx, db, extras)
 		if err == nil {
 			db = o.db
-			fmt.Printf("Target db is now %s\n", db.Name())
+			log.Printf("Target db is now %s\n", db.Name())
 		}
 	} else if err == nil {
 		m := (*pm)[0].change
@@ -169,7 +170,7 @@ func loadDb(
 			options := driver.CreateCollectionOptions{}
 			options.KeyOptions = &ko
 			if _, err := db.CreateCollection(ctx, migCol, &options); err != nil {
-				fmt.Printf("Failed to create collection %s", migCol)
+				log.Printf("Failed to create collection %s", migCol)
 				return db, err
 			}
 		}
@@ -291,7 +292,7 @@ func (cl Collection) Migrate(ctx context.Context, db driver.Database, _ map[stri
 		}
 		err = col.Remove(ctx)
 		if !e(err) {
-			fmt.Printf("Deleted collection '%s'\n", cl.Name)
+			log.Printf("Deleted collection '%s'\n", cl.Name)
 		}
 		return errors.Wrapf(err, "Couldn't delete collection '%s'.", cl.Name)
 	case MODIFY:
@@ -355,7 +356,7 @@ func (g Graph) Migrate(ctx context.Context, db driver.Database, _ map[string]int
 		}
 		err = aG.Remove(ctx)
 		if !e(err) {
-			fmt.Printf("Deleted graph '%s'\n", g.Name)
+			log.Printf("Deleted graph '%s'\n", g.Name)
 		}
 		return errors.Wrapf(err, "Couldn't remove graph %s", g.Name)
 	case MODIFY:
@@ -370,7 +371,7 @@ func (g Graph) Migrate(ctx context.Context, db driver.Database, _ map[string]int
 			for _, re := range g.RemoveEdges {
 				ec, _, err := aG.EdgeCollection(ctx, re)
 				if driver.IsNotFoundGeneral(err) {
-					fmt.Printf("Couldn't find edge collection '%s' to remove.\n", re)
+					log.Printf("Couldn't find edge collection '%s' to remove.\n", re)
 					continue
 				}
 
@@ -384,7 +385,7 @@ func (g Graph) Migrate(ctx context.Context, db driver.Database, _ map[string]int
 			for _, v := range g.RemoveVertices {
 				vc, err := aG.VertexCollection(ctx, v)
 				if driver.IsNotFoundGeneral(err) {
-					fmt.Printf("Couldn't find vertex '%s' to remove.", v)
+					log.Printf("Couldn't find vertex '%s' to remove.", v)
 				}
 				if err = vc.Remove(ctx); e(err) {
 					return errors.Wrapf(err, "Couldn't remove vertex collection '%s'", v)
@@ -662,7 +663,7 @@ func (a AQL) Migrate(ctx context.Context, db driver.Database, extras map[string]
 	defer func(cur driver.Cursor) {
 		err := cur.Close()
 		if err != nil {
-			fmt.Printf("could not close cursor")
+			log.Printf("could not close cursor")
 		}
 	}(cur)
 	return nil
