@@ -118,6 +118,7 @@ type PersistentIndex struct {
 	Unique       bool
 	Sparse       bool
 	InBackground bool
+	StoredValues []string
 }
 
 // TTLIndex creates a TTL index on the collections' fields.
