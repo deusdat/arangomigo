@@ -646,6 +646,46 @@ func (i SkiplistIndex) Migrate(ctx context.Context, db driver.Database, _ map[st
 	}
 }
 
+func (i InvertedIndex) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
+	cl, err := db.Collection(ctx, i.Collection)
+	if e(err) {
+		return errors.Wrapf(
+			err,
+			"Couldn't create inverted index on collection '%s'. Collection not found",
+			i.Collection,
+		)
+	}
+	switch i.Action {
+	case DELETE:
+		err = dropIndex(ctx, cl, i.Name)
+		return errors.Wrapf(
+			err,
+			"Could not drop inverted index with name '%s' in collection %s",
+			i.Name, i.Collection,
+		)
+	case CREATE:
+		options := driver.InvertedIndexOptions{}
+		options.Name = i.Name
+		options.Fields = i.InvertedIndexFields()
+		options.InBackground = i.InBackground
+		options.Analyzer = i.Analyzer
+		asc := true
+		options.PrimarySort.Fields = []driver.ArangoSearchPrimarySortEntry{
+			{Field: i.Fields[0], Ascending: &asc},
+		}
+		_, _, err = cl.EnsureInvertedIndex(ctx, &options)
+
+		return errors.Wrapf(
+			err,
+			"Could not create inverted index with fields '%s' in collection %s",
+			i.Fields, i.Collection,
+		)
+
+	default:
+		return errors.Errorf("Unknown action %s", i.Action)
+	}
+}
+
 func (a AQL) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	escaped := make(map[string]interface{})
 	for k, v := range a.BindVars {

@@ -71,7 +71,7 @@ func TestFullMigration(t *testing.T) {
 	// Can't really tell which indexes are available, just that recipes should have
 	// 7: 1 for the PK and 6 others.
 	idxs, err := recipes.Indexes(ctx)
-	assert.Equal(t, 8, len(idxs), "Recipes should have 8 indexes")
+	assert.Equal(t, 9, len(idxs), "Recipes should have 9 indexes")
 
 	// Make sure wait for sync sticks.
 	colprop, err := recipes.Properties(ctx)

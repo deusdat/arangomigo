@@ -48,6 +48,7 @@ var hashidx = regexp.MustCompile(`^type:\shashindex`)
 var persistentidx = regexp.MustCompile(`^type:\spersistentindex`)
 var ttlidx = regexp.MustCompile(`^type:\sttlindex`)
 var skipidx = regexp.MustCompile(`^type:\sskiplistindex`)
+var invertedidx = regexp.MustCompile(`^type:\sinvertedindex`)
 var view = regexp.MustCompile(`^type:\sview`)
 
 // User the data used to update a user account
@@ -139,6 +140,25 @@ type SkiplistIndex struct {
 	Sparse        bool
 	NoDeduplicate bool
 	InBackground  bool
+}
+
+type InvertedIndex struct {
+	Operation    `yaml:",inline"`
+	Fields       []string
+	Collection   string
+	Analyzer     string
+	InBackground bool
+}
+
+func (i InvertedIndex) InvertedIndexFields() []driver.InvertedIndexField {
+	invertedIndexFields := []driver.InvertedIndexField{}
+	for _, field := range i.Fields {
+		invertedIndexFields = append(
+			invertedIndexFields,
+			driver.InvertedIndexField{Name: field},
+		)
+	}
+	return invertedIndexFields
 }
 
 // AQL allows arbitrary AQL execution as part of the migration.
@@ -396,6 +416,8 @@ func pickT(contents []byte) (Migration, error) {
 		return new(TTLIndex), nil
 	case skipidx.MatchString(s):
 		return new(SkiplistIndex), nil
+	case invertedidx.MatchString(s):
+		return new(InvertedIndex), nil
 	case view.MatchString(s):
 		return new(SearchView), nil
 	default:
