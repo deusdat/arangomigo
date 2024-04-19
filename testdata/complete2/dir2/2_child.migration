@@ -1,0 +1,8 @@
+type: invertedindex
+name: inv_index
+action: create
+fields:
+    - one
+collection: Recipes
+inbackground: false
+analyzer: text_en

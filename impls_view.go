@@ -20,6 +20,16 @@ func (view SearchAliasView) Migrate(ctx context.Context, db driver.Database, ext
 			log.Printf("Created view '%s'\n", view.Name)
 		}
 		return errors.Wrapf(err, "Couldn't create view '%s'", view.Name)
+	case DELETE:
+		dbView, err := db.View(ctx, view.Name)
+		if e(err) {
+			return errors.Wrapf(err, "Couldn't find view '%s' to delete", view.Name)
+		}
+		err = dbView.Remove(ctx)
+		if !e(err) {
+			log.Printf("Deleted view '%s'\n", view.Name)
+		}
+		return errors.Wrapf(err, "Couldn't delete view '%s'", view.Name)
 	}
 	return nil
 }
