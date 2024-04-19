@@ -50,6 +50,7 @@ var ttlidx = regexp.MustCompile(`^type:\sttlindex`)
 var skipidx = regexp.MustCompile(`^type:\sskiplistindex`)
 var invertedidx = regexp.MustCompile(`^type:\sinvertedindex`)
 var view = regexp.MustCompile(`^type:\sview`)
+var searchaliasview = regexp.MustCompile(`^type:\ssearchaliasview`)
 
 // User the data used to update a user account
 type User struct {
@@ -226,6 +227,17 @@ type SearchView struct {
 	// Links contains the properties for how individual collections
 	// are indexed in thie view.
 	Links []SearchElementProperties `yaml:"links,omitempty"`
+}
+
+type SearchAliasView struct {
+	Operation `yaml:",inline"`
+
+	Indexes []SearchAliasViewIndex
+}
+
+type SearchAliasViewIndex struct {
+	Collection string
+	Index      string
 }
 
 // ConsolidationPolicy holds threshold values specifying when to
@@ -420,6 +432,8 @@ func pickT(contents []byte) (Migration, error) {
 		return new(InvertedIndex), nil
 	case view.MatchString(s):
 		return new(SearchView), nil
+	case searchaliasview.MatchString(s):
+		return new(SearchAliasView), nil
 	default:
 		return nil, errors.New("Can't determine YAML type")
 	}

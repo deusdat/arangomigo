@@ -82,6 +82,18 @@ func TestFullMigration(t *testing.T) {
 	vcs, err := g.VertexCollections(ctx)
 	assert.NoError(t, err, "Should have gotten vertices")
 
+	viewExists, viewExistsErr := db.ViewExists(ctx, "testing_searchalias_view")
+	assert.NoError(t, viewExistsErr, "Should have got a search-alias view")
+	assert.True(t, viewExists, "Should have got testing_searchalias_view")
+
+	view, err := db.View(ctx, "testing_searchalias_view")
+	assert.NoError(t, err, "Should have got view")
+	v, err := view.ArangoSearchViewAlias()
+	assert.NoError(t, err, "Should have got view as search-alias view")
+	viewProperties, err := v.Properties(ctx)
+	assert.NoError(t, err, "Should have got search-alias view properties")
+	assert.Len(t, viewProperties.Indexes, 1, "Should have 1 index")
+
 	// Vertices include those in edges and oraphans.
 	justNames := []string{}
 	for _, k := range vcs {

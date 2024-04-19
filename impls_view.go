@@ -2,11 +2,35 @@ package arangomigo
 
 import (
 	"context"
-	"github.com/arangodb/go-driver"
-	"github.com/pkg/errors"
 	"log"
 	"reflect"
+
+	"github.com/arangodb/go-driver"
+	"github.com/pkg/errors"
 )
+
+func (view SearchAliasView) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
+	switch view.Action {
+	case CREATE:
+		options := &driver.ArangoSearchAliasViewProperties{
+			Indexes: view.ArangoSearchAliasIndexes(),
+		}
+		_, err := db.CreateArangoSearchAliasView(ctx, view.Name, options)
+		if !e(err) {
+			log.Printf("Created view '%s'\n", view.Name)
+		}
+		return errors.Wrapf(err, "Couldn't create view '%s'", view.Name)
+	}
+	return nil
+}
+
+func (view SearchAliasView) ArangoSearchAliasIndexes() []driver.ArangoSearchAliasIndex {
+	result := []driver.ArangoSearchAliasIndex{}
+	for _, searchIndex := range view.Indexes {
+		result = append(result, driver.ArangoSearchAliasIndex{Collection: searchIndex.Collection, Index: searchIndex.Index})
+	}
+	return result
+}
 
 // The impls_view contains all the implementation code for create, modifying and deleting an Arango
 // Search View.
