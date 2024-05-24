@@ -49,6 +49,7 @@ var persistentidx = regexp.MustCompile(`^type:\spersistentindex`)
 var ttlidx = regexp.MustCompile(`^type:\sttlindex`)
 var skipidx = regexp.MustCompile(`^type:\sskiplistindex`)
 var view = regexp.MustCompile(`^type:\sview`)
+var pipeline = regexp.MustCompile(`type:\spipeline`)
 
 // User the data used to update a user account
 type User struct {
@@ -250,6 +251,12 @@ type SearchElementProperties struct {
 	TrackListPositions *bool `yaml:"trackListPositions,omitempty"`
 }
 
+type PipelineAnalyzer struct {
+	Operation    `yaml:",inline"`
+	Properties   driver.ArangoSearchAnalyzerProperties `yaml:"properties,omitempty"`
+	Features     []driver.ArangoSearchAnalyzerFeature `yaml:"features,omitempty"`
+}
+
 var validVersion = regexp.MustCompile(`^\d*(\.\d*)*?$`)
 
 // Pairs migrations together.
@@ -398,6 +405,7 @@ func pickT(contents []byte) (Migration, error) {
 		return new(SkiplistIndex), nil
 	case view.MatchString(s):
 		return new(SearchView), nil
+	case pipeline.MatchString(s):return new(PipelineAnalyzer), nil
 	default:
 		return nil, errors.New("Can't determine YAML type")
 	}

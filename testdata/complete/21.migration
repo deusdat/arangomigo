@@ -1,0 +1,17 @@
+type: pipeline
+action: create
+name: testPipelineAnalyzer
+properties:
+    pipeline:
+        -   type: "norm"
+            properties:
+                locale: "en.utf-8"
+                accent: true
+                case: "lower"
+        -   type: "delimiter"
+            properties:
+                delimiter: " "
+features:
+    - position
+    - norm
+    - frequency
