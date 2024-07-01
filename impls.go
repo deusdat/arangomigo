@@ -646,6 +646,28 @@ func (i SkiplistIndex) Migrate(ctx context.Context, db driver.Database, _ map[st
 	}
 }
 
+func (i PipelineAnalyzer) Migrate(ctx context.Context, db driver.Database, _ map[string]interface{}) error {
+	switch i.Action {
+	case DELETE:
+		a, err := db.Analyzer(ctx, i.Name)
+		if (e(err)) {
+			return errors.Wrapf(err, "Error removing analyzer %s", i.Name)
+		}
+		err = a.Remove(ctx, true)
+		return errors.Wrapf(err, "Failed %s", i.Action)
+	case CREATE:
+		_, _, err := db.EnsureAnalyzer(ctx, driver.ArangoSearchAnalyzerDefinition{
+			Name:       i.Name,
+			Type: 		"pipeline",
+			Properties: i.Properties,
+			Features:   i.Features,
+		})
+		return errors.Wrapf(err, "Failed %s", i.Action)
+	default:
+		return errors.Errorf("Unknown action %s", i.Action)
+	}
+}
+
 func (a AQL) Migrate(ctx context.Context, db driver.Database, extras map[string]interface{}) error {
 	escaped := make(map[string]interface{})
 	for k, v := range a.BindVars {
