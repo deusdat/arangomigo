@@ -1,6 +1,8 @@
-type: searchaliasview
+type: invertedindex
+name: inv_index
 action: create
-name: testing_searchalias_view
-indexes:
-    - collection: recipes
-      index: inv_index
+fields:
+  - one
+collection: recipes
+inbackground: false
+analyzer: text_en

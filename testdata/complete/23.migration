@@ -1,0 +1,6 @@
+type: searchaliasview
+action: create
+name: testing_searchalias_view
+indexes:
+  - collection: recipes
+    index: inv_index

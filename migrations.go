@@ -444,7 +444,7 @@ func pickT(contents []byte) (Migration, error) {
 	case searchaliasview.MatchString(s):
 		return new(SearchAliasView), nil
 	default:
-		return nil, errors.New("Can't determine YAML type")
+		return nil, errors.New("Can't determine YAML type '" + s + "'")
 	}
 }
 

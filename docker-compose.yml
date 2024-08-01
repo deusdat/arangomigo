@@ -22,6 +22,8 @@ services:
     image: arangodb:latest
     environment:
       ARANGO_ROOT_PASSWORD: simple
+    ports:
+      - "8529:8529"
   arangodb_ssl:
     build:
       context: .
