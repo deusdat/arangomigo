@@ -48,8 +48,10 @@ var hashidx = regexp.MustCompile(`^type:\shashindex`)
 var persistentidx = regexp.MustCompile(`^type:\spersistentindex`)
 var ttlidx = regexp.MustCompile(`^type:\sttlindex`)
 var skipidx = regexp.MustCompile(`^type:\sskiplistindex`)
+var invertedidx = regexp.MustCompile(`^type:\sinvertedindex`)
 var view = regexp.MustCompile(`^type:\sview`)
 var pipeline = regexp.MustCompile(`type:\spipeline`)
+var searchaliasview = regexp.MustCompile(`^type:\ssearchaliasview`)
 
 // User the data used to update a user account
 type User struct {
@@ -142,6 +144,25 @@ type SkiplistIndex struct {
 	InBackground  bool
 }
 
+type InvertedIndex struct {
+	Operation    `yaml:",inline"`
+	Fields       []string
+	Collection   string
+	Analyzer     string
+	InBackground bool
+}
+
+func (i InvertedIndex) InvertedIndexFields() []driver.InvertedIndexField {
+	invertedIndexFields := []driver.InvertedIndexField{}
+	for _, field := range i.Fields {
+		invertedIndexFields = append(
+			invertedIndexFields,
+			driver.InvertedIndexField{Name: field},
+		)
+	}
+	return invertedIndexFields
+}
+
 // AQL allows arbitrary AQL execution as part of the migration.
 type AQL struct {
 	Operation `yaml:",inline"`
@@ -209,6 +230,17 @@ type SearchView struct {
 	Links []SearchElementProperties `yaml:"links,omitempty"`
 }
 
+type SearchAliasView struct {
+	Operation `yaml:",inline"`
+
+	Indexes []SearchAliasViewIndex
+}
+
+type SearchAliasViewIndex struct {
+	Collection string
+	Index      string
+}
+
 // ConsolidationPolicy holds threshold values specifying when to
 // consolidate view data.
 // see ArangoSearchConsolidationPolicy
@@ -252,9 +284,9 @@ type SearchElementProperties struct {
 }
 
 type PipelineAnalyzer struct {
-	Operation    `yaml:",inline"`
-	Properties   driver.ArangoSearchAnalyzerProperties `yaml:"properties,omitempty"`
-	Features     []driver.ArangoSearchAnalyzerFeature `yaml:"features,omitempty"`
+	Operation  `yaml:",inline"`
+	Properties driver.ArangoSearchAnalyzerProperties `yaml:"properties,omitempty"`
+	Features   []driver.ArangoSearchAnalyzerFeature  `yaml:"features,omitempty"`
 }
 
 var validVersion = regexp.MustCompile(`^\d*(\.\d*)*?$`)
@@ -403,9 +435,14 @@ func pickT(contents []byte) (Migration, error) {
 		return new(TTLIndex), nil
 	case skipidx.MatchString(s):
 		return new(SkiplistIndex), nil
+	case invertedidx.MatchString(s):
+		return new(InvertedIndex), nil
 	case view.MatchString(s):
 		return new(SearchView), nil
-	case pipeline.MatchString(s):return new(PipelineAnalyzer), nil
+	case pipeline.MatchString(s):
+		return new(PipelineAnalyzer), nil
+	case searchaliasview.MatchString(s):
+		return new(SearchAliasView), nil
 	default:
 		return nil, errors.New("Can't determine YAML type")
 	}

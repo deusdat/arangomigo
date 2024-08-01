@@ -1,0 +1,4 @@
+type: invertedindex
+name: inv_index
+action: delete
+collection: Recipes
