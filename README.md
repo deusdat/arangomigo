@@ -99,6 +99,7 @@ This example creates a collection in the database named in the config file and s
   * shardkeys - list of fields to use for the shard key.
   * numberofshards - integer
   * allowuserkeys - boolean 
+  * keygeneratortype - string
   * volatile - boolean
   * compactable - boolean
   * waitforsync - boolean

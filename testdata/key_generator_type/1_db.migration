@@ -1,0 +1,6 @@
+type: database
+action: create
+name: MigoKeyGenerator
+allowed:
+  - username: ${patricksUser}
+    password: ${patricksPassword}

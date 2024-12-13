@@ -1,0 +1,10 @@
+# Test configuration to make sure the system can create a collection with a custom key generator type
+endpoints:
+   - http://0.0.0.0:8529
+username: root
+password: simple
+migrationspath: testdata/key_generator_type
+db: MigoKeyGenerator
+extras:
+  {patricksUser: jdavenpo,
+   patricksPassword: L33t5uck3r5}
