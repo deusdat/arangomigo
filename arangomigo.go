@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
@@ -59,6 +60,11 @@ func loadConf(confLoc string) (*Config, error) {
 		encased[fmt.Sprintf("${%s}", k)] = v
 	}
 	conf.Extras = encased
+
+	arangoUrl, exists := os.LookupEnv("ARANGO_URL")
+	if exists {
+		conf.Endpoints = []string{arangoUrl}
+	}
 	return &conf, nil
 }
 

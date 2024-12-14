@@ -274,12 +274,18 @@ func (cl Collection) Migrate(ctx context.Context, db driver.Database, _ map[stri
 				options.Type = driver.CollectionTypeEdge
 			}
 		}
-		// Configures the user keys
-		ko := driver.CollectionKeyOptions{}
-		if cl.AllowUserKeys != nil {
-			ko.AllowUserKeysPtr = cl.AllowUserKeys
+
+		configuresKeyOptions := cl.AllowUserKeys != nil || cl.KeyGeneratorType != nil
+		if configuresKeyOptions {
+			ko := driver.CollectionKeyOptions{}
+			if cl.AllowUserKeys != nil {
+				ko.AllowUserKeysPtr = cl.AllowUserKeys
+			}
+			if cl.KeyGeneratorType != nil {
+				ko.Type = driver.KeyGeneratorType(*cl.KeyGeneratorType)
+			}
+			options.KeyOptions = &ko
 		}
-		options.KeyOptions = &ko
 
 		_, err := db.CreateCollection(ctx, cl.Name, &options)
 		if e(err) {
